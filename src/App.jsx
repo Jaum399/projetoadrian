@@ -6,6 +6,17 @@ const ILLUSTRATIVE_PLACEHOLDER = `data:image/svg+xml;utf8,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#182742"/><stop offset="100%" stop-color="#6f78ff"/></linearGradient></defs><rect width="1200" height="800" fill="url(#g)"/><circle cx="250" cy="120" r="180" fill="#5fe6ff" fill-opacity="0.18"/><circle cx="980" cy="720" r="240" fill="#a68cff" fill-opacity="0.2"/><text x="50%" y="52%" fill="#e9f4ff" font-size="62" font-family="Sora, Arial" text-anchor="middle">Imagem Ilustrativa</text></svg>`
 )}`;
 
+const AUTH_USERS_KEY = "adrian-beauty-users";
+const AUTH_SESSION_KEY = "adrian-beauty-session";
+const ORDER_HISTORY_KEY = "adrian-beauty-orders";
+const WISHLIST_KEY = "adrian-beauty-wishlist";
+
+const AUTH_DEFAULT_FORM = {
+  name: "",
+  email: "",
+  password: ""
+};
+
 const beautyHighlights = [
   {
     id: "sensorial",
@@ -68,10 +79,46 @@ function withImageFallback(event) {
   event.currentTarget.src = ILLUSTRATIVE_PLACEHOLDER;
 }
 
+function readLocalJson(key, fallbackValue) {
+  if (typeof window === "undefined") {
+    return fallbackValue;
+  }
+
+  try {
+    const rawValue = localStorage.getItem(key);
+    return rawValue ? JSON.parse(rawValue) : fallbackValue;
+  } catch {
+    return fallbackValue;
+  }
+}
+
+function formatOrderDate(value) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  }).format(new Date(value));
+}
+
 function App() {
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [selectedShowcase, setSelectedShowcase] = useState("todos");
   const [activeFlow, setActiveFlow] = useState("home");
+  const [authView, setAuthView] = useState("login");
+  const [authForm, setAuthForm] = useState(AUTH_DEFAULT_FORM);
+  const [authMessage, setAuthMessage] = useState("");
+  const [currentUser, setCurrentUser] = useState(() =>
+    readLocalJson(AUTH_SESSION_KEY, null)
+  );
+  const [registeredUsers, setRegisteredUsers] = useState(() =>
+    readLocalJson(AUTH_USERS_KEY, [])
+  );
+  const [orderHistory, setOrderHistory] = useState(() =>
+    readLocalJson(ORDER_HISTORY_KEY, [])
+  );
+  const [wishlistItems, setWishlistItems] = useState(() =>
+    readLocalJson(WISHLIST_KEY, [])
+  );
   const [search, setSearch] = useState("");
   const [cartItems, setCartItems] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -172,6 +219,27 @@ function App() {
     [cartItems]
   );
 
+  useEffect(() => {
+    localStorage.setItem(AUTH_USERS_KEY, JSON.stringify(registeredUsers));
+  }, [registeredUsers]);
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(currentUser));
+      return;
+    }
+
+    localStorage.removeItem(AUTH_SESSION_KEY);
+  }, [currentUser]);
+
+  useEffect(() => {
+    localStorage.setItem(ORDER_HISTORY_KEY, JSON.stringify(orderHistory));
+  }, [orderHistory]);
+
+  useEffect(() => {
+    localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlistItems));
+  }, [wishlistItems]);
+
   function addToCart(product) {
     setCartItems((previous) => {
       const existing = previous.find((item) => item.id === product.id);
@@ -196,9 +264,25 @@ function App() {
     );
   }
 
+  function toggleWishlist(product) {
+    setWishlistItems((previous) => {
+      const exists = previous.some((item) => item.id === product.id);
+      if (exists) {
+        return previous.filter((item) => item.id !== product.id);
+      }
+
+      return [product, ...previous];
+    });
+  }
+
+  function openAuthView(view) {
+    setAuthView(view);
+    setActiveFlow("auth");
+  }
+
   function handleFlowAction(key) {
     if (key === "login" || key === "register") {
-      setActiveFlow("auth");
+      openAuthView(key === "register" ? "register" : "login");
       return;
     }
 
@@ -208,7 +292,11 @@ function App() {
     }
 
     if (key === "account") {
-      setActiveFlow("account");
+      if (currentUser) {
+        setActiveFlow("account");
+      } else {
+        openAuthView("login");
+      }
       return;
     }
 
@@ -224,6 +312,334 @@ function App() {
 
     setActiveFlow("home");
   }
+
+  function handleAuthSubmit(event) {
+    event.preventDefault();
+
+    const email = authForm.email.trim().toLowerCase();
+    const password = authForm.password.trim();
+    const name = authForm.name.trim();
+
+    if (!email || !password) {
+      setAuthMessage("Preencha e-mail e senha para continuar.");
+      return;
+    }
+
+    if (authView === "register") {
+      if (!name) {
+        setAuthMessage("Informe seu nome para criar a conta.");
+        return;
+      }
+
+      const emailExists = registeredUsers.some((user) => user.email === email);
+      if (emailExists) {
+        setAuthMessage("Este e-mail já possui cadastro.");
+        return;
+      }
+
+      const nextUser = { name, email, password };
+      setRegisteredUsers((previous) => [...previous, nextUser]);
+      setCurrentUser({ name, email });
+      setAuthForm(AUTH_DEFAULT_FORM);
+      setAuthMessage("Conta criada com sucesso. Você já entrou.");
+      setActiveFlow("account");
+      setAuthView("login");
+      return;
+    }
+
+    const matchedUser = registeredUsers.find(
+      (user) => user.email === email && user.password === password
+    );
+
+    if (!matchedUser) {
+      setAuthMessage("Credenciais inválidas. Verifique e tente novamente.");
+      return;
+    }
+
+    setCurrentUser({ name: matchedUser.name, email: matchedUser.email });
+    setAuthForm(AUTH_DEFAULT_FORM);
+    setAuthMessage("Login realizado com sucesso.");
+    setActiveFlow("account");
+  }
+
+  function handleLogout() {
+    setCurrentUser(null);
+    setActiveFlow("home");
+    setAuthMessage("Você saiu da conta.");
+  }
+
+  function handleCheckout() {
+    if (!currentUser) {
+      setAuthMessage("Entre ou cadastre-se para finalizar a compra.");
+      openAuthView("login");
+      setIsCartOpen(false);
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      return;
+    }
+
+    const order = {
+      id: `order-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      total: subtotal,
+      items: cartItems,
+      customer: currentUser.email,
+      status: "Em processamento"
+    };
+
+    setOrderHistory((previous) => [order, ...previous]);
+    setCartItems([]);
+    setIsCartOpen(false);
+    setActiveFlow("orders");
+    setAuthMessage("Compra finalizada com sucesso.");
+  }
+
+  const currentUserOrders = orderHistory.filter(
+    (order) => order.customer === currentUser?.email
+  );
+
+  const renderFlowPanel = () => {
+    if (activeFlow === "auth") {
+      return (
+        <section className="flow-panel auth-panel">
+          <div className="flow-copy">
+            <p className="flow-kicker">Acesso seguro</p>
+            <h3>{authView === "register" ? "Criar sua conta" : "Entrar na sua conta"}</h3>
+            <p>
+              Cadastre-se para acompanhar pedidos, finalizar compras e salvar sua experiência.
+            </p>
+            <div className="flow-benefits">
+              <span>Checkout protegido</span>
+              <span>Histórico local de pedidos</span>
+              <span>Atalho para minha conta</span>
+            </div>
+          </div>
+
+          <form className="auth-form" onSubmit={handleAuthSubmit}>
+            <div className="auth-switch">
+              <button
+                type="button"
+                className={authView === "login" ? "chip active" : "chip"}
+                onClick={() => setAuthView("login")}
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                className={authView === "register" ? "chip active" : "chip"}
+                onClick={() => setAuthView("register")}
+              >
+                Cadastro
+              </button>
+            </div>
+
+            {authView === "register" && (
+              <label className="field-group">
+                <span>Nome completo</span>
+                <input
+                  value={authForm.name}
+                  onChange={(event) =>
+                    setAuthForm((previous) => ({ ...previous, name: event.target.value }))
+                  }
+                  placeholder="Seu nome"
+                />
+              </label>
+            )}
+
+            <label className="field-group">
+              <span>E-mail</span>
+              <input
+                type="email"
+                value={authForm.email}
+                onChange={(event) =>
+                  setAuthForm((previous) => ({ ...previous, email: event.target.value }))
+                }
+                placeholder="voce@exemplo.com"
+              />
+            </label>
+
+            <label className="field-group">
+              <span>Senha</span>
+              <input
+                type="password"
+                value={authForm.password}
+                onChange={(event) =>
+                  setAuthForm((previous) => ({ ...previous, password: event.target.value }))
+                }
+                placeholder="••••••••"
+              />
+            </label>
+
+            <div className="auth-actions">
+              <button type="submit" className="add-btn">
+                {authView === "register" ? "Criar conta" : "Entrar"}
+              </button>
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => {
+                  setAuthForm(AUTH_DEFAULT_FORM);
+                  setAuthMessage("");
+                }}
+              >
+                Limpar
+              </button>
+            </div>
+
+            {authMessage && <p className="flow-message">{authMessage}</p>}
+          </form>
+        </section>
+      );
+    }
+
+    if (activeFlow === "account") {
+      return (
+        <section className="flow-panel account-panel">
+          <div className="flow-copy">
+            <p className="flow-kicker">Minha conta</p>
+            <h3>{currentUser ? `Olá, ${currentUser.name}` : "Acesse sua conta"}</h3>
+            <p>
+              Consulte seus dados, pedidos recentes e acompanhe sua rotina de compras.
+            </p>
+          </div>
+
+          {currentUser ? (
+            <div className="account-grid">
+              <article className="info-card">
+                <strong>Dados da conta</strong>
+                <p>{currentUser.name}</p>
+                <p>{currentUser.email}</p>
+                <button type="button" className="ghost-btn" onClick={handleLogout}>
+                  Sair
+                </button>
+              </article>
+
+              <article className="info-card">
+                <strong>Pedidos recentes</strong>
+                {currentUserOrders.length === 0 ? (
+                  <p>Sem pedidos ainda. Finalize sua primeira compra.</p>
+                ) : (
+                  <div className="mini-list">
+                    {currentUserOrders.slice(0, 3).map((order) => (
+                      <div key={order.id} className="mini-row">
+                        <span>{formatOrderDate(order.createdAt)}</span>
+                        <strong>{formatPrice(order.total)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </article>
+            </div>
+          ) : (
+            <button type="button" className="add-btn" onClick={() => openAuthView("login")}>
+              Entrar para acessar a conta
+            </button>
+          )}
+        </section>
+      );
+    }
+
+    if (activeFlow === "orders") {
+      return (
+        <section className="flow-panel orders-panel">
+          <div className="flow-copy">
+            <p className="flow-kicker">Pedidos</p>
+            <h3>Resumo de compras</h3>
+            <p>Veja o histórico dos pedidos realizados nesta navegação.</p>
+          </div>
+
+          {currentUser ? (
+            currentUserOrders.length === 0 ? (
+              <p className="empty-list">Nenhum pedido realizado ainda.</p>
+            ) : (
+              <div className="orders-list">
+                {currentUserOrders.map((order) => (
+                  <article key={order.id} className="order-card">
+                    <div className="order-head">
+                      <strong>{formatOrderDate(order.createdAt)}</strong>
+                      <span>{order.status}</span>
+                    </div>
+                    <p>{order.items.length} item(ns)</p>
+                    <strong>{formatPrice(order.total)}</strong>
+                  </article>
+                ))}
+              </div>
+            )
+          ) : (
+            <button type="button" className="add-btn" onClick={() => openAuthView("login")}>
+              Entre para visualizar seus pedidos
+            </button>
+          )}
+        </section>
+      );
+    }
+
+    if (activeFlow === "wishlist") {
+      return (
+        <section className="flow-panel wishlist-panel">
+          <div className="flow-copy">
+            <p className="flow-kicker">Desejos</p>
+            <h3>Sua lista curada</h3>
+            <p>Salve produtos para rever depois e montar uma compra mais estratégica.</p>
+          </div>
+
+          {wishlistItems.length === 0 ? (
+            <p className="empty-list">Nenhum item salvo ainda. Use o coração nos cards.</p>
+          ) : (
+            <div className="orders-list">
+              {wishlistItems.map((item) => (
+                <article key={item.id} className="order-card wishlist-card">
+                  <div className="order-head">
+                    <strong>{item.name}</strong>
+                    <span>{item.category}</span>
+                  </div>
+                  <p>{item.badge}</p>
+                  <div className="wishlist-actions">
+                    <strong>{formatPrice(item.price)}</strong>
+                    <div className="wishlist-buttons">
+                      <button type="button" className="ghost-btn" onClick={() => addToCart(item)}>
+                        Adicionar ao carrinho
+                      </button>
+                      <button type="button" className="ghost-btn" onClick={() => toggleWishlist(item)}>
+                        Remover
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      );
+    }
+
+    if (activeFlow === "support") {
+      return (
+        <section className="flow-panel support-panel">
+          <div className="flow-copy">
+            <p className="flow-kicker">Atendimento</p>
+            <h3>Suporte boutique</h3>
+            <p>Canal de atendimento para dúvidas, trocas e orientações de rotina.</p>
+          </div>
+
+          <div className="account-grid">
+            <article className="info-card">
+              <strong>WhatsApp</strong>
+              <p>(11) 99999-9999</p>
+            </article>
+            <article className="info-card">
+              <strong>E-mail</strong>
+              <p>atendimento@adrianbeauty.com</p>
+            </article>
+          </div>
+        </section>
+      );
+    }
+
+    return null;
+  };
 
   function handleCategoryMenuClick(item) {
     const normalized = item.toLowerCase();
@@ -260,7 +676,7 @@ function App() {
       <header className="header-shell">
         <div className="header-top">
           <p>
-            Bem-vinda a Adrian Beauty | fluxo ativo: <strong>{activeFlow}</strong>
+            {currentUser ? `Olá, ${currentUser.name}` : "Bem-vinda a Adrian Beauty"} | fluxo ativo: <strong>{activeFlow}</strong>
           </p>
           <div className="top-links">
             {configState.frontendFlows.accountLinks.map((link) => (
@@ -331,6 +747,8 @@ function App() {
 
           <p className="image-note">{configState.imageConfig.note}</p>
 
+          {renderFlowPanel()}
+
           <section className="beauty-highlights" aria-label="Destaques ilustrativos">
             {beautyHighlights.map((item) => (
               <article key={item.id} className="highlight-card">
@@ -387,9 +805,20 @@ function App() {
                       <span className="price">{formatPrice(product.price)}</span>
                       <span className="old-price">{formatPrice(product.oldPrice)}</span>
                     </p>
-                    <button className="add-btn" onClick={() => addToCart(product)}>
-                      Adicionar
-                    </button>
+                    <div className="product-actions">
+                      <button className="add-btn" onClick={() => addToCart(product)}>
+                        Adicionar
+                      </button>
+                      <button
+                        type="button"
+                        className="ghost-btn product-wishlist"
+                        onClick={() => toggleWishlist(product)}
+                      >
+                        {wishlistItems.some((item) => item.id === product.id)
+                          ? "Salvo"
+                          : "Salvar"}
+                      </button>
+                    </div>
                   </div>
                 </article>
               ))}
@@ -448,7 +877,9 @@ function App() {
           <p>
             Subtotal: <strong>{formatPrice(subtotal)}</strong>
           </p>
-          <button className="checkout">Finalizar compra</button>
+          <button className="checkout" onClick={handleCheckout}>
+            Finalizar compra
+          </button>
         </div>
       </aside>
 

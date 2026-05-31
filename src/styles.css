@@ -288,6 +288,198 @@ button {
   font-size: 0.88rem;
 }
 
+.flow-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgba(16, 27, 47, 0.94), rgba(10, 17, 31, 0.92));
+  box-shadow: 0 12px 28px rgba(4, 10, 22, 0.36);
+}
+
+.flow-copy h3 {
+  margin: 6px 0 8px;
+  font-size: clamp(1.05rem, 2vw, 1.45rem);
+  line-height: 1.2;
+}
+
+.flow-copy p {
+  margin: 0;
+  color: #bfd0ef;
+  line-height: 1.55;
+}
+
+.flow-kicker {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #8fb0e6;
+  font-size: 0.72rem;
+}
+
+.flow-benefits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.flow-benefits span {
+  border: 1px solid #34507d;
+  border-radius: 999px;
+  padding: 7px 11px;
+  color: #dce8ff;
+  background: rgba(11, 19, 34, 0.8);
+  white-space: nowrap;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(9, 15, 27, 0.68);
+}
+
+.auth-switch {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-group span {
+  color: #b7c8e8;
+  font-size: 0.84rem;
+}
+
+.field-group input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 12px;
+  background: rgba(10, 18, 32, 0.88);
+  color: var(--text);
+}
+
+.field-group input::placeholder {
+  color: #8c9dbd;
+}
+
+.field-group input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(87, 228, 255, 0.16);
+}
+
+.auth-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ghost-btn {
+  border: 1px solid var(--line);
+  background: rgba(13, 22, 40, 0.84);
+  color: #d7e4ff;
+  border-radius: 11px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.flow-message {
+  margin: 0;
+  color: #7df0c9;
+  font-size: 0.88rem;
+}
+
+.account-grid,
+.orders-list {
+  display: grid;
+  gap: 12px;
+}
+
+.info-card,
+.order-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(10, 18, 32, 0.78);
+  padding: 14px;
+}
+
+.info-card strong,
+.order-card strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.mini-list {
+  display: grid;
+  gap: 8px;
+}
+
+.mini-row,
+.order-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.order-head span {
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(87, 228, 255, 0.12);
+  border: 1px solid rgba(87, 228, 255, 0.22);
+  color: #c7f6ff;
+  font-size: 0.76rem;
+}
+
+.support-panel .account-grid,
+.account-panel .account-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.auth-panel,
+.account-panel,
+.orders-panel,
+.wishlist-panel,
+.support-panel {
+  margin-bottom: 2px;
+}
+
+.wishlist-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.wishlist-buttons,
+.product-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.product-actions .add-btn,
+.product-wishlist {
+  flex: 1 1 0;
+}
+
+.wishlist-card p {
+  margin: 0;
+  color: #c6d5f0;
+}
+
 .beauty-highlights {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -757,6 +949,12 @@ button {
 
   .beauty-highlights,
   .beauty-gallery {
+    grid-template-columns: 1fr;
+  }
+
+  .flow-panel,
+  .support-panel .account-grid,
+  .account-panel .account-grid {
     grid-template-columns: 1fr;
   }
 
