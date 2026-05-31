@@ -710,16 +710,6 @@ function App() {
       </header>
 
       <main className="content-grid">
-        <aside className="category-sidebar">
-          <strong>Categorias</strong>
-          {configState.frontendFlows.categoryMenu.map((item) => (
-            <button key={item} onClick={() => handleCategoryMenuClick(item)}>
-              {item}
-            </button>
-          ))}
-          <button onClick={() => setSelectedCategory("Todos")}>Ver todos</button>
-        </aside>
-
         <section className="main-column">
           <section
             className="hero"
