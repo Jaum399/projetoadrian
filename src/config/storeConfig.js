@@ -28,8 +28,7 @@ export const frontendFlows = {
     { key: "support", label: "Central de Atendimento" },
     { key: "account", label: "Minha Conta" },
     { key: "orders", label: "Meus Pedidos" },
-    { key: "wishlist", label: "Desejos" },
-    { key: "tracking", label: "Rastrear Pedido" }
+    { key: "wishlist", label: "Desejos" }
   ],
   showcaseTabs: [
     { key: "todos", label: "Todos" },

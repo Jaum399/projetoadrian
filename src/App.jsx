@@ -1,8 +1,49 @@
 import { useEffect, useMemo, useState } from "react";
-import { categories, products } from "./data/products";
+import { products as fallbackProducts } from "./data/products";
 import { frontendFlows, imageConfig } from "./config/storeConfig";
 
-const ADMIN_STORAGE_KEY = "adrian-beauty-admin-config";
+const ILLUSTRATIVE_PLACEHOLDER = `data:image/svg+xml;utf8,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#182742"/><stop offset="100%" stop-color="#6f78ff"/></linearGradient></defs><rect width="1200" height="800" fill="url(#g)"/><circle cx="250" cy="120" r="180" fill="#5fe6ff" fill-opacity="0.18"/><circle cx="980" cy="720" r="240" fill="#a68cff" fill-opacity="0.2"/><text x="50%" y="52%" fill="#e9f4ff" font-size="62" font-family="Sora, Arial" text-anchor="middle">Imagem Ilustrativa</text></svg>`
+)}`;
+
+const beautyHighlights = [
+  {
+    id: "sensorial",
+    title: "Jornada Sensorial",
+    subtitle: "Aromas, texturas e cuidado premium no seu ritual.",
+    image:
+      "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
+    id: "rotina",
+    title: "Rotina Inteligente",
+    subtitle: "Selecoes para dia, noite e ocasiões especiais.",
+    image:
+      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1200&q=80"
+  },
+  {
+    id: "signature",
+    title: "Colecao Signature",
+    subtitle: "Fragrancias e skincare em edicao curada.",
+    image:
+      "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=1200&q=80"
+  }
+];
+
+const beautyGallery = [
+  {
+    id: "g1",
+    label: "Glow Atelier",
+    image:
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1400&q=80"
+  },
+  {
+    id: "g2",
+    label: "Studio Perfumaria",
+    image:
+      "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=1400&q=80"
+  }
+];
 
 function formatPrice(value) {
   return new Intl.NumberFormat("pt-BR", {
@@ -18,6 +59,15 @@ function getDefaultConfig() {
   };
 }
 
+function withImageFallback(event) {
+  if (event.currentTarget.dataset.fallbackApplied === "true") {
+    return;
+  }
+
+  event.currentTarget.dataset.fallbackApplied = "true";
+  event.currentTarget.src = ILLUSTRATIVE_PLACEHOLDER;
+}
+
 function App() {
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [selectedShowcase, setSelectedShowcase] = useState("todos");
@@ -26,42 +76,85 @@ function App() {
   const [cartItems, setCartItems] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  const [adminMode, setAdminMode] = useState(false);
-  const [adminMessage, setAdminMessage] = useState("");
-  const [configState, setConfigState] = useState(getDefaultConfig);
-  const [configJson, setConfigJson] = useState("");
+  const configState = useMemo(getDefaultConfig, []);
+  const [allProducts, setAllProducts] = useState(fallbackProducts);
+  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+  const [catalogNotice, setCatalogNotice] = useState("");
 
   const [activeBanner, setActiveBanner] = useState(configState.imageConfig.heroBanners[0].id);
 
   useEffect(() => {
-    const saved = localStorage.getItem(ADMIN_STORAGE_KEY);
-    if (!saved) {
-      return;
-    }
+    let ignore = false;
 
-    try {
-      const parsed = JSON.parse(saved);
-      if (parsed?.imageConfig?.heroBanners && parsed?.frontendFlows) {
-        setConfigState(parsed);
-        if (parsed.imageConfig.heroBanners[0]?.id) {
-          setActiveBanner(parsed.imageConfig.heroBanners[0].id);
+    async function loadCatalog() {
+      try {
+        setIsCatalogLoading(true);
+        setCatalogNotice("");
+
+        const response = await fetch("/api/products");
+        if (!response.ok) {
+          throw new Error("Falha ao carregar catalogo");
+        }
+
+        const payload = await response.json();
+        const nextProducts = Array.isArray(payload?.products) ? payload.products : [];
+
+        if (ignore) {
+          return;
+        }
+
+        if (nextProducts.length > 0) {
+          setAllProducts(nextProducts);
+        } else {
+          setAllProducts(fallbackProducts);
+        }
+
+        if (payload?.source === "fallback" && payload?.message) {
+          setCatalogNotice(payload.message);
+        }
+      } catch {
+        if (ignore) {
+          return;
+        }
+
+        setAllProducts(fallbackProducts);
+        setCatalogNotice("Sem conexao com API. Exibindo catalogo ilustrativo local.");
+      } finally {
+        if (!ignore) {
+          setIsCatalogLoading(false);
         }
       }
-    } catch {
-      setAdminMessage("Configuracao salva invalida. Usando padrao.");
     }
+
+    loadCatalog();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
-  useEffect(() => {
-    setConfigJson(JSON.stringify(configState, null, 2));
-  }, [configState]);
+  const categories = useMemo(() => {
+    const values = [];
+
+    allProducts.forEach((product) => {
+      if (typeof product?.category !== "string" || !product.category.trim()) {
+        return;
+      }
+
+      if (!values.includes(product.category)) {
+        values.push(product.category);
+      }
+    });
+
+    return values;
+  }, [allProducts]);
 
   const currentBanner =
     configState.imageConfig.heroBanners.find((banner) => banner.id === activeBanner) ||
     configState.imageConfig.heroBanners[0];
 
   const visibleProducts = useMemo(() => {
-    return products.filter((product) => {
+    return allProducts.filter((product) => {
       const byCategory =
         selectedCategory === "Todos" || product.category === selectedCategory;
       const byShowcase =
@@ -72,7 +165,7 @@ function App() {
 
       return byCategory && byShowcase && bySearch;
     });
-  }, [search, selectedCategory, selectedShowcase]);
+  }, [allProducts, search, selectedCategory, selectedShowcase]);
 
   const subtotal = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.price * item.qty, 0),
@@ -129,11 +222,6 @@ function App() {
       return;
     }
 
-    if (key === "tracking") {
-      setActiveFlow("tracking");
-      return;
-    }
-
     setActiveFlow("home");
   }
 
@@ -167,98 +255,12 @@ function App() {
     setSelectedCategory("Todos");
   }
 
-  function updateBanner(index, field, value) {
-    setConfigState((previous) => {
-      const heroBanners = previous.imageConfig.heroBanners.map((banner, currentIndex) => {
-        if (currentIndex !== index) {
-          return banner;
-        }
-
-        return { ...banner, [field]: value };
-      });
-
-      return {
-        ...previous,
-        imageConfig: {
-          ...previous.imageConfig,
-          heroBanners
-        }
-      };
-    });
-  }
-
-  function updateImageNote(value) {
-    setConfigState((previous) => ({
-      ...previous,
-      imageConfig: {
-        ...previous.imageConfig,
-        note: value
-      }
-    }));
-  }
-
-  function updateFlowLabel(type, key, value) {
-    setConfigState((previous) => ({
-      ...previous,
-      frontendFlows: {
-        ...previous.frontendFlows,
-        [type]: previous.frontendFlows[type].map((item) =>
-          item.key === key ? { ...item, label: value } : item
-        )
-      }
-    }));
-  }
-
-  function updateCategoryMenu(rawValue) {
-    const categoryMenu = rawValue
-      .split("\n")
-      .map((item) => item.trim())
-      .filter(Boolean);
-
-    setConfigState((previous) => ({
-      ...previous,
-      frontendFlows: {
-        ...previous.frontendFlows,
-        categoryMenu
-      }
-    }));
-  }
-
-  function saveConfig() {
-    localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(configState));
-    setAdminMessage("Configuracao salva no navegador.");
-  }
-
-  function restoreDefaultConfig() {
-    const defaultConfig = getDefaultConfig();
-    setConfigState(defaultConfig);
-    setActiveBanner(defaultConfig.imageConfig.heroBanners[0].id);
-    setAdminMessage("Configuracao padrao restaurada.");
-  }
-
-  function applyJsonConfig() {
-    try {
-      const parsed = JSON.parse(configJson);
-      if (!parsed?.imageConfig?.heroBanners || !parsed?.frontendFlows) {
-        throw new Error();
-      }
-
-      setConfigState(parsed);
-      if (parsed.imageConfig.heroBanners[0]?.id) {
-        setActiveBanner(parsed.imageConfig.heroBanners[0].id);
-      }
-      setAdminMessage("JSON aplicado com sucesso.");
-    } catch {
-      setAdminMessage("JSON invalido. Verifique a estrutura e tente novamente.");
-    }
-  }
-
   return (
     <div className="store-app">
       <header className="header-shell">
         <div className="header-top">
           <p>
-            Ola, visitante | fluxo ativo: <strong>{activeFlow}</strong>
+            Bem-vinda a Adrian Beauty | fluxo ativo: <strong>{activeFlow}</strong>
           </p>
           <div className="top-links">
             {configState.frontendFlows.accountLinks.map((link) => (
@@ -284,9 +286,6 @@ function App() {
           </label>
 
           <div className="header-actions">
-            <button className="admin-toggle" onClick={() => setAdminMode((prev) => !prev)}>
-              {adminMode ? "Fechar admin" : "Modo admin"}
-            </button>
             <button className="cart-button" onClick={() => setIsCartOpen(true)}>
               Carrinho ({cartItems.reduce((sum, item) => sum + item.qty, 0)})
             </button>
@@ -332,6 +331,18 @@ function App() {
 
           <p className="image-note">{configState.imageConfig.note}</p>
 
+          <section className="beauty-highlights" aria-label="Destaques ilustrativos">
+            {beautyHighlights.map((item) => (
+              <article key={item.id} className="highlight-card">
+                <img src={item.image} alt={item.title} onError={withImageFallback} />
+                <div className="highlight-overlay">
+                  <strong>{item.title}</strong>
+                  <p>{item.subtitle}</p>
+                </div>
+              </article>
+            ))}
+          </section>
+
           <section className="showcase-tabs">
             {configState.frontendFlows.showcaseTabs.map((tab) => (
               <button
@@ -356,29 +367,44 @@ function App() {
             ))}
           </section>
 
+          {catalogNotice && <p className="image-note">{catalogNotice}</p>}
+
           <section className="product-grid">
-            {visibleProducts.map((product) => (
-              <article key={product.id} className="product-card">
-                <div className="image-wrapper">
-                  <img src={product.image} alt={product.name} />
-                  <span className="badge">{product.badge}</span>
-                </div>
-                <div className="product-body">
-                  <small>{product.category}</small>
-                  <h3>{product.name}</h3>
-                  <p className="price-line">
-                    <span className="price">{formatPrice(product.price)}</span>
-                    <span className="old-price">{formatPrice(product.oldPrice)}</span>
-                  </p>
-                  <button className="add-btn" onClick={() => addToCart(product)}>
-                    Adicionar
-                  </button>
-                </div>
-              </article>
-            ))}
-            {visibleProducts.length === 0 && (
+            {isCatalogLoading && (
+              <p className="empty-list">Carregando catalogo...</p>
+            )}
+            {!isCatalogLoading &&
+              visibleProducts.map((product) => (
+                <article key={product.id} className="product-card">
+                  <div className="image-wrapper">
+                    <img src={product.image} alt={product.name} onError={withImageFallback} />
+                    <span className="badge">{product.badge}</span>
+                  </div>
+                  <div className="product-body">
+                    <small>{product.category}</small>
+                    <h3>{product.name}</h3>
+                    <p className="price-line">
+                      <span className="price">{formatPrice(product.price)}</span>
+                      <span className="old-price">{formatPrice(product.oldPrice)}</span>
+                    </p>
+                    <button className="add-btn" onClick={() => addToCart(product)}>
+                      Adicionar
+                    </button>
+                  </div>
+                </article>
+              ))}
+            {!isCatalogLoading && visibleProducts.length === 0 && (
               <p className="empty-list">Nenhum item para os filtros atuais.</p>
             )}
+          </section>
+
+          <section className="beauty-gallery" aria-label="Galeria ilustrativa">
+            {beautyGallery.map((item) => (
+              <article key={item.id} className="gallery-card">
+                <img src={item.image} alt={item.label} onError={withImageFallback} />
+                <p>{item.label}</p>
+              </article>
+            ))}
           </section>
         </section>
       </main>
@@ -386,110 +412,10 @@ function App() {
       <footer className="footer">
         <div>
           <strong>Adrian Beauty Store</strong>
-          <p>Fluxos de frontend inspirados em perfumaria com conteudo ilustrativo.</p>
+          <p>Curadoria de beleza premium com imagens e conteudo ilustrativo.</p>
         </div>
-        <p>Atendimento: seg a sab, 9h as 20h</p>
+        <p>Atendimento boutique: seg a sab, 9h as 20h</p>
       </footer>
-
-      {adminMode && (
-        <aside className="admin-panel">
-          <div className="admin-head">
-            <h3>Modo admin</h3>
-            <button onClick={() => setAdminMode(false)}>Fechar</button>
-          </div>
-
-          <p className="admin-tip">
-            Edite banners, textos e secoes sem alterar o codigo de layout.
-          </p>
-
-          <section className="admin-section">
-            <h4>Banners</h4>
-            {configState.imageConfig.heroBanners.map((banner, index) => (
-              <div key={banner.id} className="admin-card">
-                <strong>{banner.id}</strong>
-                <input
-                  value={banner.title}
-                  onChange={(event) => updateBanner(index, "title", event.target.value)}
-                  placeholder="Titulo"
-                />
-                <input
-                  value={banner.subtitle}
-                  onChange={(event) => updateBanner(index, "subtitle", event.target.value)}
-                  placeholder="Subtitulo"
-                />
-                <input
-                  value={banner.image}
-                  onChange={(event) => updateBanner(index, "image", event.target.value)}
-                  placeholder="URL da imagem"
-                />
-              </div>
-            ))}
-          </section>
-
-          <section className="admin-section">
-            <h4>Texto do aviso de imagem</h4>
-            <textarea
-              value={configState.imageConfig.note}
-              onChange={(event) => updateImageNote(event.target.value)}
-              rows={3}
-            />
-          </section>
-
-          <section className="admin-section">
-            <h4>Textos das abas de vitrine</h4>
-            {configState.frontendFlows.showcaseTabs.map((tab) => (
-              <label key={tab.key} className="admin-field">
-                <span>{tab.key}</span>
-                <input
-                  value={tab.label}
-                  onChange={(event) =>
-                    updateFlowLabel("showcaseTabs", tab.key, event.target.value)
-                  }
-                />
-              </label>
-            ))}
-          </section>
-
-          <section className="admin-section">
-            <h4>Textos dos links da barra superior</h4>
-            {configState.frontendFlows.accountLinks.map((tab) => (
-              <label key={tab.key} className="admin-field">
-                <span>{tab.key}</span>
-                <input
-                  value={tab.label}
-                  onChange={(event) =>
-                    updateFlowLabel("accountLinks", tab.key, event.target.value)
-                  }
-                />
-              </label>
-            ))}
-          </section>
-
-          <section className="admin-section">
-            <h4>Secoes do menu lateral</h4>
-            <textarea
-              value={configState.frontendFlows.categoryMenu.join("\n")}
-              onChange={(event) => updateCategoryMenu(event.target.value)}
-              rows={6}
-            />
-          </section>
-
-          <section className="admin-section">
-            <h4>Configuracao JSON</h4>
-            <textarea
-              value={configJson}
-              onChange={(event) => setConfigJson(event.target.value)}
-              rows={9}
-            />
-            <div className="admin-actions">
-              <button onClick={applyJsonConfig}>Aplicar JSON</button>
-              <button onClick={saveConfig}>Salvar no navegador</button>
-              <button onClick={restoreDefaultConfig}>Restaurar padrao</button>
-            </div>
-            {adminMessage && <p className="admin-message">{adminMessage}</p>}
-          </section>
-        </aside>
-      )}
 
       <aside className={isCartOpen ? "cart-drawer open" : "cart-drawer"}>
         <div className="cart-header">
@@ -503,7 +429,7 @@ function App() {
           <div className="cart-list">
             {cartItems.map((item) => (
               <div key={item.id} className="cart-item">
-                <img src={item.image} alt={item.name} />
+                <img src={item.image} alt={item.name} onError={withImageFallback} />
                 <div>
                   <p>{item.name}</p>
                   <small>{formatPrice(item.price)}</small>
