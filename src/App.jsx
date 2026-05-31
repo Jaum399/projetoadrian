@@ -13,6 +13,7 @@ const WISHLIST_KEY = "adrian-beauty-wishlist";
 
 const AUTH_DEFAULT_FORM = {
   name: "",
+  cpf: "",
   email: "",
   password: ""
 };
@@ -98,6 +99,22 @@ function formatOrderDate(value) {
     month: "short",
     year: "numeric"
   }).format(new Date(value));
+}
+
+function normalizeCpf(value) {
+  return value.replace(/\D/g, "").slice(0, 11);
+}
+
+function formatCpfInput(value) {
+  const digits = normalizeCpf(value);
+
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) {
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  }
+
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
 
 function App() {
@@ -317,6 +334,7 @@ function App() {
     event.preventDefault();
 
     const email = authForm.email.trim().toLowerCase();
+    const cpf = normalizeCpf(authForm.cpf.trim());
     const password = authForm.password.trim();
     const name = authForm.name.trim();
 
@@ -331,15 +349,28 @@ function App() {
         return;
       }
 
+      if (cpf.length !== 11) {
+        setAuthMessage("Informe um CPF válido com 11 dígitos.");
+        return;
+      }
+
       const emailExists = registeredUsers.some((user) => user.email === email);
       if (emailExists) {
         setAuthMessage("Este e-mail já possui cadastro.");
         return;
       }
 
-      const nextUser = { name, email, password };
+      const cpfExists = registeredUsers.some(
+        (user) => normalizeCpf(user.cpf || "") === cpf
+      );
+      if (cpfExists) {
+        setAuthMessage("Este CPF já possui cadastro.");
+        return;
+      }
+
+      const nextUser = { name, cpf, email, password };
       setRegisteredUsers((previous) => [...previous, nextUser]);
-      setCurrentUser({ name, email });
+      setCurrentUser({ name, cpf, email });
       setAuthForm(AUTH_DEFAULT_FORM);
       setAuthMessage("Conta criada com sucesso. Você já entrou.");
       setActiveFlow("account");
@@ -356,7 +387,11 @@ function App() {
       return;
     }
 
-    setCurrentUser({ name: matchedUser.name, email: matchedUser.email });
+    setCurrentUser({
+      name: matchedUser.name,
+      cpf: normalizeCpf(matchedUser.cpf || ""),
+      email: matchedUser.email
+    });
     setAuthForm(AUTH_DEFAULT_FORM);
     setAuthMessage("Login realizado com sucesso.");
     setActiveFlow("account");
@@ -436,16 +471,33 @@ function App() {
             </div>
 
             {authView === "register" && (
-              <label className="field-group">
-                <span>Nome completo</span>
-                <input
-                  value={authForm.name}
-                  onChange={(event) =>
-                    setAuthForm((previous) => ({ ...previous, name: event.target.value }))
-                  }
-                  placeholder="Seu nome"
-                />
-              </label>
+              <>
+                <label className="field-group">
+                  <span>Nome completo</span>
+                  <input
+                    value={authForm.name}
+                    onChange={(event) =>
+                      setAuthForm((previous) => ({ ...previous, name: event.target.value }))
+                    }
+                    placeholder="Seu nome"
+                  />
+                </label>
+
+                <label className="field-group">
+                  <span>CPF</span>
+                  <input
+                    inputMode="numeric"
+                    value={authForm.cpf}
+                    onChange={(event) =>
+                      setAuthForm((previous) => ({
+                        ...previous,
+                        cpf: formatCpfInput(event.target.value)
+                      }))
+                    }
+                    placeholder="000.000.000-00"
+                  />
+                </label>
+              </>
             )}
 
             <label className="field-group">
@@ -510,6 +562,7 @@ function App() {
               <article className="info-card">
                 <strong>Dados da conta</strong>
                 <p>{currentUser.name}</p>
+                <p>{currentUser.cpf ? formatCpfInput(currentUser.cpf) : "CPF não informado"}</p>
                 <p>{currentUser.email}</p>
                 <button type="button" className="ghost-btn" onClick={handleLogout}>
                   Sair
