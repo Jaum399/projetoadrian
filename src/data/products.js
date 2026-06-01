@@ -14,7 +14,7 @@ export const products = [
     price: 259.9,
     oldPrice: 319.9,
     image:
-      "https://images.unsplash.com/photo-1615634262417-4f48f9f95f7a?auto=format&fit=crop&w=800&q=80",
+      "https://images.pexels.com/photos/965989/pexels-photo-965989.jpeg?auto=compress&cs=tinysrgb&w=1200",
     badge: "Mais vendido",
     flow: "mais-desejados"
   },
@@ -25,7 +25,7 @@ export const products = [
     price: 139.9,
     oldPrice: 179.9,
     image:
-      "https://images.unsplash.com/photo-1629738668292-0f369f2f89ea?auto=format&fit=crop&w=800&q=80",
+      "https://images.pexels.com/photos/1190829/pexels-photo-1190829.jpeg?auto=compress&cs=tinysrgb&w=1200",
     badge: "Novo",
     flow: "promocoes"
   },
@@ -36,7 +36,7 @@ export const products = [
     price: 89.9,
     oldPrice: 109.9,
     image:
-      "https://images.unsplash.com/photo-1583241801671-839dae4f2b10?auto=format&fit=crop&w=800&q=80",
+      "https://images.pexels.com/photos/1961792/pexels-photo-1961792.jpeg?auto=compress&cs=tinysrgb&w=1200",
     badge: "Oferta",
     flow: "promocoes"
   },

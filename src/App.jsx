@@ -6,6 +6,9 @@ const ILLUSTRATIVE_PLACEHOLDER = `data:image/svg+xml;utf8,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#182742"/><stop offset="100%" stop-color="#6f78ff"/></linearGradient></defs><rect width="1200" height="800" fill="url(#g)"/><circle cx="250" cy="120" r="180" fill="#5fe6ff" fill-opacity="0.18"/><circle cx="980" cy="720" r="240" fill="#a68cff" fill-opacity="0.2"/><text x="50%" y="52%" fill="#e9f4ff" font-size="62" font-family="Sora, Arial" text-anchor="middle">Imagem Ilustrativa</text></svg>`
 )}`;
 
+const IMAGE_FALLBACK_PHOTO =
+  "https://images.pexels.com/photos/965989/pexels-photo-965989.jpeg?auto=compress&cs=tinysrgb&w=1200";
+
 const AUTH_USERS_KEY = "adrian-beauty-users";
 const AUTH_SESSION_KEY = "adrian-beauty-session";
 const ORDER_HISTORY_KEY = "adrian-beauty-orders";
@@ -82,12 +85,19 @@ function getDefaultConfig() {
 }
 
 function withImageFallback(event) {
-  if (event.currentTarget.dataset.fallbackApplied === "true") {
+  const stage = event.currentTarget.dataset.fallbackStage || "0";
+
+  if (stage === "0") {
+    event.currentTarget.dataset.fallbackStage = "1";
+    event.currentTarget.src = IMAGE_FALLBACK_PHOTO;
     return;
   }
 
-  event.currentTarget.dataset.fallbackApplied = "true";
-  event.currentTarget.src = ILLUSTRATIVE_PLACEHOLDER;
+  if (stage === "1") {
+    event.currentTarget.dataset.fallbackStage = "2";
+    event.currentTarget.src = ILLUSTRATIVE_PLACEHOLDER;
+    return;
+  }
 }
 
 function readLocalJson(key, fallbackValue) {
