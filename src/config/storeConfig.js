@@ -57,20 +57,7 @@ export const frontendFlows = {
     eta: "Postagem em ate 24h uteis"
   },
   categoryMenu: [
-    "Marcas",
-    "Combos Promocionais",
-    "Mais Desejados",
-    "Promocoes",
-    "Hidratantes",
     "Masculinos",
-    "Femininos",
-    "Perfumes Arabes",
-    "Amadeirados",
-    "Aromaticos",
-    "Citricos",
-    "Doces",
-    "Especiados",
-    "Florais",
-    "Frutados"
+    "Femininos"
   ]
 };
