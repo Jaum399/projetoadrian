@@ -28,7 +28,8 @@ export const frontendFlows = {
     { key: "support", label: "Central de Atendimento" },
     { key: "account", label: "Minha Conta" },
     { key: "orders", label: "Meus Pedidos" },
-    { key: "wishlist", label: "Desejos" }
+    { key: "wishlist", label: "Desejos" },
+    { key: "tracking", label: "Rastrear Pedido" }
   ],
   showcaseTabs: [
     { key: "todos", label: "Todos" },
@@ -36,6 +37,25 @@ export const frontendFlows = {
     { key: "promocoes", label: "Promocoes" },
     { key: "combos", label: "Combos Promocionais" }
   ],
+  trustBadges: [
+    { key: "installments", title: "Compre em ate 5x", subtitle: "Sem juros" },
+    { key: "shipping", title: "Entregamos", subtitle: "Para todo o Brasil" },
+    { key: "authentic", title: "Perfumes", subtitle: "Originais e importados" },
+    { key: "security", title: "Seguranca", subtitle: "Loja 100% protegida" }
+  ],
+  hotSearches: [
+    "Hawas",
+    "9PM Night",
+    "Perfumes Arabes",
+    "Kits para Presente",
+    "Aromaticos"
+  ],
+  support: {
+    whatsapp: "(11) 99999-9999",
+    email: "atendimento@adrianbeauty.com",
+    hours: "Seg a sab, 9h as 20h",
+    eta: "Postagem em ate 24h uteis"
+  },
   categoryMenu: [
     "Marcas",
     "Combos Promocionais",
@@ -49,6 +69,8 @@ export const frontendFlows = {
     "Aromaticos",
     "Citricos",
     "Doces",
-    "Especiados"
+    "Especiados",
+    "Florais",
+    "Frutados"
   ]
 };

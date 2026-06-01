@@ -15,8 +15,18 @@ const AUTH_DEFAULT_FORM = {
   name: "",
   cpf: "",
   email: "",
-  password: ""
+  password: "",
+  confirmPassword: ""
 };
+
+const AUTH_REMEMBERED_EMAIL_KEY = "adrian-beauty-auth-email";
+
+const TRACKING_STATUS_STEPS = [
+  "Pedido recebido",
+  "Pagamento aprovado",
+  "Em separacao",
+  "Enviado"
+];
 
 const beautyHighlights = [
   {
@@ -101,8 +111,40 @@ function formatOrderDate(value) {
   }).format(new Date(value));
 }
 
+function createTrackingCode(orderId) {
+  return `LP${String(orderId).replace(/\D/g, "").slice(-8).padStart(8, "0")}`;
+}
+
 function normalizeCpf(value) {
   return value.replace(/\D/g, "").slice(0, 11);
+}
+
+function normalizeIdentifier(value) {
+  return value.trim().toLowerCase();
+}
+
+function getPasswordStrength(password) {
+  const value = password.trim();
+
+  if (!value) {
+    return { label: "Senha vazia", score: 0 };
+  }
+
+  let score = 0;
+  if (value.length >= 8) score += 1;
+  if (/[A-Z]/.test(value)) score += 1;
+  if (/[0-9]/.test(value)) score += 1;
+  if (/[^A-Za-z0-9]/.test(value)) score += 1;
+
+  if (score <= 1) {
+    return { label: "Fraca", score };
+  }
+
+  if (score === 2) {
+    return { label: "Média", score };
+  }
+
+  return { label: "Forte", score };
 }
 
 function formatCpfInput(value) {
@@ -124,12 +166,21 @@ function App() {
   const [authView, setAuthView] = useState("login");
   const [authForm, setAuthForm] = useState(AUTH_DEFAULT_FORM);
   const [authMessage, setAuthMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberLogin, setRememberLogin] = useState(true);
   const [currentUser, setCurrentUser] = useState(() =>
     readLocalJson(AUTH_SESSION_KEY, null)
   );
   const [registeredUsers, setRegisteredUsers] = useState(() =>
     readLocalJson(AUTH_USERS_KEY, [])
   );
+  const [rememberedEmail, setRememberedEmail] = useState(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+
+    return window.localStorage.getItem(AUTH_REMEMBERED_EMAIL_KEY) || "";
+  });
   const [orderHistory, setOrderHistory] = useState(() =>
     readLocalJson(ORDER_HISTORY_KEY, [])
   );
@@ -139,6 +190,8 @@ function App() {
   const [search, setSearch] = useState("");
   const [cartItems, setCartItems] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [trackingInput, setTrackingInput] = useState("");
+  const [trackingResult, setTrackingResult] = useState(null);
 
   const configState = useMemo(getDefaultConfig, []);
   const [allProducts, setAllProducts] = useState(fallbackProducts);
@@ -257,6 +310,19 @@ function App() {
     localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlistItems));
   }, [wishlistItems]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (rememberedEmail) {
+      window.localStorage.setItem(AUTH_REMEMBERED_EMAIL_KEY, rememberedEmail);
+      return;
+    }
+
+    window.localStorage.removeItem(AUTH_REMEMBERED_EMAIL_KEY);
+  }, [rememberedEmail]);
+
   function addToCart(product) {
     setCartItems((previous) => {
       const existing = previous.find((item) => item.id === product.id);
@@ -294,7 +360,25 @@ function App() {
 
   function openAuthView(view) {
     setAuthView(view);
+    setShowPassword(false);
+    setAuthMessage("");
     setActiveFlow("auth");
+
+    if (view === "login") {
+      setAuthForm((previous) => ({
+        ...AUTH_DEFAULT_FORM,
+        email: rememberedEmail || previous.email
+      }));
+      setRememberLogin(true);
+      return;
+    }
+
+    if (view === "reset") {
+      setAuthForm(AUTH_DEFAULT_FORM);
+      return;
+    }
+
+    setAuthForm(AUTH_DEFAULT_FORM);
   }
 
   function handleFlowAction(key) {
@@ -327,25 +411,31 @@ function App() {
       return;
     }
 
+    if (key === "tracking") {
+      setActiveFlow("tracking");
+      return;
+    }
+
     setActiveFlow("home");
   }
 
   function handleAuthSubmit(event) {
     event.preventDefault();
 
-    const email = authForm.email.trim().toLowerCase();
+    const identifier = normalizeIdentifier(authForm.email);
     const cpf = normalizeCpf(authForm.cpf.trim());
     const password = authForm.password.trim();
+    const confirmPassword = authForm.confirmPassword.trim();
     const name = authForm.name.trim();
-
-    if (!email || !password) {
-      setAuthMessage("Preencha e-mail e senha para continuar.");
-      return;
-    }
 
     if (authView === "register") {
       if (!name) {
         setAuthMessage("Informe seu nome para criar a conta.");
+        return;
+      }
+
+      if (!identifier.includes("@")) {
+        setAuthMessage("Informe um e-mail válido para o cadastro.");
         return;
       }
 
@@ -354,7 +444,22 @@ function App() {
         return;
       }
 
-      const emailExists = registeredUsers.some((user) => user.email === email);
+      if (!password || password.length < 8) {
+        setAuthMessage("A senha precisa ter pelo menos 8 caracteres.");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setAuthMessage("A confirmação de senha não confere.");
+        return;
+      }
+
+      if (getPasswordStrength(password).score < 2) {
+        setAuthMessage("Use uma senha mais forte com letras e números.");
+        return;
+      }
+
+      const emailExists = registeredUsers.some((user) => user.email === identifier);
       if (emailExists) {
         setAuthMessage("Este e-mail já possui cadastro.");
         return;
@@ -368,9 +473,10 @@ function App() {
         return;
       }
 
-      const nextUser = { name, cpf, email, password };
+      const nextUser = { name, cpf, email: identifier, password };
       setRegisteredUsers((previous) => [...previous, nextUser]);
-      setCurrentUser({ name, cpf, email });
+      setCurrentUser({ name, cpf, email: identifier });
+      setRememberedEmail(identifier);
       setAuthForm(AUTH_DEFAULT_FORM);
       setAuthMessage("Conta criada com sucesso. Você já entrou.");
       setActiveFlow("account");
@@ -378,9 +484,61 @@ function App() {
       return;
     }
 
-    const matchedUser = registeredUsers.find(
-      (user) => user.email === email && user.password === password
-    );
+    if (authView === "reset") {
+      if (!identifier && cpf.length !== 11) {
+        setAuthMessage("Informe o e-mail ou CPF da conta para redefinir a senha.");
+        return;
+      }
+
+      if (!password || password.length < 8) {
+        setAuthMessage("Crie uma nova senha com pelo menos 8 caracteres.");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setAuthMessage("A confirmação de senha não confere.");
+        return;
+      }
+
+      const updatedUsers = registeredUsers.map((user) => {
+        const matchesEmail = user.email === identifier;
+        const matchesCpf = normalizeCpf(user.cpf || "") === cpf;
+
+        if (!matchesEmail && !matchesCpf) {
+          return user;
+        }
+
+        return {
+          ...user,
+          password
+        };
+      });
+
+      const changed = updatedUsers.some((user, index) => user !== registeredUsers[index]);
+
+      if (!changed) {
+        setAuthMessage("Nenhuma conta foi localizada com esses dados.");
+        return;
+      }
+
+      setRegisteredUsers(updatedUsers);
+      setAuthForm(AUTH_DEFAULT_FORM);
+      setAuthView("login");
+      setAuthMessage("Senha atualizada. Use a nova senha para entrar.");
+      return;
+    }
+
+    if (!identifier || !password) {
+      setAuthMessage("Preencha e-mail/CPF e senha para continuar.");
+      return;
+    }
+
+    const matchedUser = registeredUsers.find((user) => {
+      const matchesEmail = user.email === identifier;
+      const matchesCpf = normalizeCpf(user.cpf || "") === cpf;
+
+      return (matchesEmail || matchesCpf) && user.password === password;
+    });
 
     if (!matchedUser) {
       setAuthMessage("Credenciais inválidas. Verifique e tente novamente.");
@@ -392,6 +550,7 @@ function App() {
       cpf: normalizeCpf(matchedUser.cpf || ""),
       email: matchedUser.email
     });
+    setRememberedEmail(rememberLogin ? matchedUser.email : "");
     setAuthForm(AUTH_DEFAULT_FORM);
     setAuthMessage("Login realizado com sucesso.");
     setActiveFlow("account");
@@ -415,13 +574,15 @@ function App() {
       return;
     }
 
+    const orderId = `order-${Date.now()}`;
     const order = {
-      id: `order-${Date.now()}`,
+      id: orderId,
       createdAt: new Date().toISOString(),
       total: subtotal,
       items: cartItems,
       customer: currentUser.email,
-      status: "Em processamento"
+      status: "Em processamento",
+      trackingCode: createTrackingCode(orderId)
     };
 
     setOrderHistory((previous) => [order, ...previous]);
@@ -431,46 +592,89 @@ function App() {
     setAuthMessage("Compra finalizada com sucesso.");
   }
 
-  const currentUserOrders = orderHistory.filter(
-    (order) => order.customer === currentUser?.email
-  );
+  function handleTrackOrder(event) {
+    event.preventDefault();
+
+    const normalized = trackingInput.trim().toUpperCase();
+    if (!normalized) {
+      setTrackingResult({
+        found: false,
+        message: "Informe um codigo de rastreio para consultar."
+      });
+      return;
+    }
+
+    const matched = orderHistory.find(
+      (order) => String(order.trackingCode || "").toUpperCase() === normalized
+    );
+
+    if (!matched) {
+      setTrackingResult({
+        found: false,
+        message: "Codigo nao localizado. Revise o numero e tente novamente."
+      });
+      return;
+    }
+
+    setTrackingResult({
+      found: true,
+      order: matched
+    });
+  }
 
   const renderFlowPanel = () => {
     if (activeFlow === "auth") {
+      const isLogin = authView === "login";
+      const isRegister = authView === "register";
+      const isReset = authView === "reset";
+      const authTitle = isRegister
+        ? "Criar sua conta"
+        : isReset
+          ? "Recuperar acesso"
+          : "Entrar na sua conta";
+      const authDescription = isRegister
+        ? "Cadastre-se para acompanhar pedidos, finalizar compras e salvar sua experiência."
+        : isReset
+          ? "Redefina sua senha com segurança e volte a acessar sua conta em poucos passos."
+          : "Use e-mail ou CPF para entrar rapidamente e retomar seus pedidos, desejos e checkout.";
+      const primaryLabel = isRegister
+        ? "Criar conta"
+        : isReset
+          ? "Atualizar senha"
+          : "Entrar";
+
       return (
         <section className="flow-panel auth-panel">
           <div className="flow-copy">
             <p className="flow-kicker">Acesso seguro</p>
-            <h3>{authView === "register" ? "Criar sua conta" : "Entrar na sua conta"}</h3>
-            <p>
-              Cadastre-se para acompanhar pedidos, finalizar compras e salvar sua experiência.
-            </p>
-            <div className="flow-benefits">
-              <span>Checkout protegido</span>
-              <span>Histórico local de pedidos</span>
-              <span>Atalho para minha conta</span>
+            <h3>{authTitle}</h3>
+            <p>{authDescription}</p>
+            <div className="flow-benefits auth-benefits">
+              <span>{isRegister ? "Cadastro em 1 minuto" : "Checkout protegido"}</span>
+              <span>{isReset ? "Recuperação local" : "Histórico local de pedidos"}</span>
+              <span>{isLogin ? "Acesso por e-mail ou CPF" : "Atalho para minha conta"}</span>
+            </div>
+            <div className="auth-steps">
+              <span>1. Escolha o fluxo</span>
+              <span>2. Preencha os dados</span>
+              <span>3. Entre ou atualize a senha</span>
             </div>
           </div>
 
           <form className="auth-form" onSubmit={handleAuthSubmit}>
-            <div className="auth-switch">
-              <button
-                type="button"
-                className={authView === "login" ? "chip active" : "chip"}
-                onClick={() => setAuthView("login")}
-              >
+            <div className="auth-switch auth-tabs">
+              <button type="button" className={isLogin ? "chip active" : "chip"} onClick={() => openAuthView("login")}>
                 Login
               </button>
-              <button
-                type="button"
-                className={authView === "register" ? "chip active" : "chip"}
-                onClick={() => setAuthView("register")}
-              >
+              <button type="button" className={isRegister ? "chip active" : "chip"} onClick={() => openAuthView("register")}>
                 Cadastro
+              </button>
+              <button type="button" className={isReset ? "chip active" : "chip"} onClick={() => openAuthView("reset")}>
+                Recuperar senha
               </button>
             </div>
 
-            {authView === "register" && (
+            {isRegister && (
               <>
                 <label className="field-group">
                   <span>Nome completo</span>
@@ -501,32 +705,113 @@ function App() {
             )}
 
             <label className="field-group">
-              <span>E-mail</span>
+              <span>{isLogin || isReset ? "E-mail ou CPF" : "E-mail"}</span>
               <input
-                type="email"
+                type={isLogin || isReset ? "text" : "email"}
                 value={authForm.email}
                 onChange={(event) =>
                   setAuthForm((previous) => ({ ...previous, email: event.target.value }))
                 }
-                placeholder="voce@exemplo.com"
+                placeholder={isLogin || isReset ? "voce@exemplo.com ou CPF" : "voce@exemplo.com"}
               />
             </label>
 
-            <label className="field-group">
-              <span>Senha</span>
-              <input
-                type="password"
-                value={authForm.password}
-                onChange={(event) =>
-                  setAuthForm((previous) => ({ ...previous, password: event.target.value }))
-                }
-                placeholder="••••••••"
-              />
-            </label>
+            {isRegister && (
+              <label className="field-group">
+                <span>CPF</span>
+                <input
+                  inputMode="numeric"
+                  value={authForm.cpf}
+                  onChange={(event) =>
+                    setAuthForm((previous) => ({
+                      ...previous,
+                      cpf: formatCpfInput(event.target.value)
+                    }))
+                  }
+                  placeholder="000.000.000-00"
+                />
+              </label>
+            )}
+
+            {(isRegister || isReset) && (
+              <label className="field-group">
+                <span>{isReset ? "Nova senha" : "Senha"}</span>
+                <div className="password-field">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={authForm.password}
+                    onChange={(event) =>
+                      setAuthForm((previous) => ({ ...previous, password: event.target.value }))
+                    }
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword((previous) => !previous)}
+                  >
+                    {showPassword ? "Ocultar" : "Mostrar"}
+                  </button>
+                </div>
+              </label>
+            )}
+
+            {(isRegister || isReset) && (
+              <label className="field-group">
+                <span>Confirmar senha</span>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={authForm.confirmPassword}
+                  onChange={(event) =>
+                    setAuthForm((previous) => ({
+                      ...previous,
+                      confirmPassword: event.target.value
+                    }))
+                  }
+                  placeholder="Repita a senha"
+                />
+              </label>
+            )}
+
+            {isLogin && (
+              <label className="remember-row">
+                <input
+                  type="checkbox"
+                  checked={rememberLogin}
+                  onChange={(event) => setRememberLogin(event.target.checked)}
+                />
+                <span>Lembrar meu e-mail neste navegador</span>
+              </label>
+            )}
+
+            {(isRegister || isReset || isLogin) && authForm.password && (
+              <div className="strength-meter" aria-live="polite">
+                <span
+                  className={
+                    getPasswordStrength(authForm.password).score >= 3
+                      ? "strength strong"
+                      : getPasswordStrength(authForm.password).score === 2
+                        ? "strength medium"
+                        : "strength weak"
+                  }
+                />
+                <p>Força da senha: {getPasswordStrength(authForm.password).label}</p>
+              </div>
+            )}
+
+            {isLogin && (
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => openAuthView("reset")}
+              >
+                Esqueci minha senha
+              </button>
+            )}
 
             <div className="auth-actions">
               <button type="submit" className="add-btn">
-                {authView === "register" ? "Criar conta" : "Entrar"}
+                {primaryLabel}
               </button>
               <button
                 type="button"
@@ -534,11 +819,20 @@ function App() {
                 onClick={() => {
                   setAuthForm(AUTH_DEFAULT_FORM);
                   setAuthMessage("");
+                  setShowPassword(false);
                 }}
               >
                 Limpar
               </button>
             </div>
+
+            <p className="auth-footnote">
+              {isLogin
+                ? "Use CPF se quiser entrar sem lembrar o e-mail cadastrado."
+                : isReset
+                  ? "A alteração vale imediatamente para o próximo acesso."
+                  : "Seu cadastro é salvo localmente neste navegador para testes do fluxo."}
+            </p>
 
             {authMessage && <p className="flow-message">{authMessage}</p>}
           </form>
@@ -614,6 +908,7 @@ function App() {
                       <strong>{formatOrderDate(order.createdAt)}</strong>
                       <span>{order.status}</span>
                     </div>
+                    <p>Rastreio: {order.trackingCode || "Não disponível"}</p>
                     <p>{order.items.length} item(ns)</p>
                     <strong>{formatPrice(order.total)}</strong>
                   </article>
@@ -680,13 +975,81 @@ function App() {
           <div className="account-grid">
             <article className="info-card">
               <strong>WhatsApp</strong>
-              <p>(11) 99999-9999</p>
+              <p>{configState.frontendFlows.support.whatsapp}</p>
             </article>
             <article className="info-card">
               <strong>E-mail</strong>
-              <p>atendimento@adrianbeauty.com</p>
+              <p>{configState.frontendFlows.support.email}</p>
+            </article>
+            <article className="info-card">
+              <strong>Horario</strong>
+              <p>{configState.frontendFlows.support.hours}</p>
+            </article>
+            <article className="info-card">
+              <strong>Postagem</strong>
+              <p>{configState.frontendFlows.support.eta}</p>
             </article>
           </div>
+        </section>
+      );
+    }
+
+    if (activeFlow === "tracking") {
+      return (
+        <section className="flow-panel support-panel">
+          <div className="flow-copy">
+            <p className="flow-kicker">Rastrear pedido</p>
+            <h3>Acompanhe sua entrega</h3>
+            <p>
+              Digite o codigo de rastreio para consultar o ultimo status do pedido.
+            </p>
+            <div className="flow-benefits">
+              {TRACKING_STATUS_STEPS.map((step) => (
+                <span key={step}>{step}</span>
+              ))}
+            </div>
+          </div>
+
+          <form className="auth-form" onSubmit={handleTrackOrder}>
+            <label className="field-group">
+              <span>Codigo de rastreio</span>
+              <input
+                value={trackingInput}
+                onChange={(event) => setTrackingInput(event.target.value.toUpperCase())}
+                placeholder="Ex: LP12345678"
+              />
+            </label>
+
+            <div className="auth-actions">
+              <button type="submit" className="add-btn">
+                Consultar pedido
+              </button>
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => {
+                  setTrackingInput("");
+                  setTrackingResult(null);
+                }}
+              >
+                Limpar
+              </button>
+            </div>
+
+            {trackingResult?.found && trackingResult.order && (
+              <article className="info-card">
+                <strong>Status: {trackingResult.order.status}</strong>
+                <p>Pedido: {trackingResult.order.id}</p>
+                <p>Rastreio: {trackingResult.order.trackingCode}</p>
+                <p>Data: {formatOrderDate(trackingResult.order.createdAt)}</p>
+                <p>Total: {formatPrice(trackingResult.order.total)}</p>
+              </article>
+            )}
+
+            {trackingResult?.found === false && (
+              <p className="empty-list">{trackingResult.message}</p>
+            )}
+          </form>
         </section>
       );
     }
@@ -699,16 +1062,24 @@ function App() {
 
     if (normalized.includes("combos")) {
       setSelectedShowcase("combos");
+      setActiveFlow("home");
       return;
     }
 
     if (normalized.includes("promoc")) {
       setSelectedShowcase("promocoes");
+      setActiveFlow("home");
       return;
     }
 
     if (normalized.includes("desejados")) {
       setSelectedShowcase("mais-desejados");
+      setActiveFlow("home");
+      return;
+    }
+
+    if (normalized.includes("wishlist") || normalized.includes("desejos")) {
+      setActiveFlow("wishlist");
       return;
     }
 
@@ -718,10 +1089,12 @@ function App() {
 
     if (match) {
       setSelectedCategory(match);
+      setActiveFlow("home");
       return;
     }
 
     setSelectedCategory("Todos");
+    setActiveFlow("home");
   }
 
   return (
@@ -729,7 +1102,9 @@ function App() {
       <header className="header-shell">
         <div className="header-top">
           <p>
-            {currentUser ? `Olá, ${currentUser.name}` : "Bem-vinda a Adrian Beauty"} | fluxo ativo: <strong>{activeFlow}</strong>
+            {currentUser
+              ? `Olá, ${currentUser.name}`
+              : "Olá, visitante"} | Entrar ou cadastrar
           </p>
           <div className="top-links">
             {configState.frontendFlows.accountLinks.map((link) => (
@@ -742,8 +1117,8 @@ function App() {
 
         <div className="header-main">
           <div className="brand">
-            <span className="brand-kicker">adrian beauty</span>
-            <h1>Perfumaria e Beleza</h1>
+            <span className="brand-kicker">perfumaria ltda</span>
+            <h1>Adrian Beauty Store</h1>
           </div>
 
           <label className="search-wrap">
@@ -760,9 +1135,24 @@ function App() {
             </button>
           </div>
         </div>
+
+        <div className="shipping-strip" aria-label="Informacoes da loja">
+          <span>Entregamos para todo o Brasil</span>
+          <span>Perfumes originais e importados</span>
+          <span>Parcelamento em ate 6x sem juros</span>
+        </div>
       </header>
 
       <main className="content-grid">
+        <aside className="category-sidebar" aria-label="Categorias da loja">
+          <strong>Categorias</strong>
+          {configState.frontendFlows.categoryMenu.map((item) => (
+            <button key={item} type="button" onClick={() => handleCategoryMenuClick(item)}>
+              {item}
+            </button>
+          ))}
+        </aside>
+
         <section className="main-column">
           <section
             className="hero"
@@ -789,6 +1179,23 @@ function App() {
           </section>
 
           <p className="image-note">{configState.imageConfig.note}</p>
+
+          <section className="trust-strip" aria-label="Beneficios da loja">
+            {configState.frontendFlows.trustBadges.map((badge) => (
+              <article key={badge.key} className="trust-card">
+                <strong>{badge.title}</strong>
+                <p>{badge.subtitle}</p>
+              </article>
+            ))}
+          </section>
+
+          <section className="showcase-tabs" aria-label="Buscas em alta">
+            {configState.frontendFlows.hotSearches.map((term) => (
+              <button key={term} className="chip" onClick={() => setSearch(term)}>
+                {term}
+              </button>
+            ))}
+          </section>
 
           {renderFlowPanel()}
 
@@ -830,6 +1237,11 @@ function App() {
 
           {catalogNotice && <p className="image-note">{catalogNotice}</p>}
 
+          <div className="section-head">
+            <h3>Lancamentos</h3>
+            <p>Vitrine com os destaques mais procurados do momento.</p>
+          </div>
+
           <section className="product-grid">
             {isCatalogLoading && (
               <p className="empty-list">Carregando catalogo...</p>
@@ -870,6 +1282,11 @@ function App() {
             )}
           </section>
 
+          <div className="section-head">
+            <h3>Escolha pelo estilo</h3>
+            <p>Colecoes para cada assinatura olfativa.</p>
+          </div>
+
           <section className="beauty-gallery" aria-label="Galeria ilustrativa">
             {beautyGallery.map((item) => (
               <article key={item.id} className="gallery-card">
@@ -884,9 +1301,9 @@ function App() {
       <footer className="footer">
         <div>
           <strong>Adrian Beauty Store</strong>
-          <p>Curadoria de beleza premium com imagens e conteudo ilustrativo.</p>
+          <p>Curadoria de fragrancias premium com atendimento boutique.</p>
         </div>
-        <p>Atendimento boutique: seg a sab, 9h as 20h</p>
+        <p>Atendimento: seg a sab, 9h as 20h | WhatsApp (11) 99999-9999</p>
       </footer>
 
       <aside className={isCartOpen ? "cart-drawer open" : "cart-drawer"}>
