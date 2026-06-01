@@ -433,6 +433,7 @@ function App() {
     event.preventDefault();
 
     const identifier = normalizeIdentifier(authForm.email);
+    const identifierCpf = normalizeCpf(identifier);
     const cpf = normalizeCpf(authForm.cpf.trim());
     const password = authForm.password.trim();
     const confirmPassword = authForm.confirmPassword.trim();
@@ -495,8 +496,16 @@ function App() {
     }
 
     if (authView === "reset") {
-      if (!identifier && cpf.length !== 11) {
+      if (!identifier) {
         setAuthMessage("Informe o e-mail ou CPF da conta para redefinir a senha.");
+        return;
+      }
+
+      const hasEmailIdentifier = identifier.includes("@");
+      const hasCpfIdentifier = identifierCpf.length === 11;
+
+      if (!hasEmailIdentifier && !hasCpfIdentifier) {
+        setAuthMessage("Informe um e-mail válido ou CPF com 11 dígitos.");
         return;
       }
 
@@ -511,8 +520,9 @@ function App() {
       }
 
       const updatedUsers = registeredUsers.map((user) => {
-        const matchesEmail = user.email === identifier;
-        const matchesCpf = normalizeCpf(user.cpf || "") === cpf;
+        const matchesEmail = hasEmailIdentifier && user.email === identifier;
+        const matchesCpf =
+          hasCpfIdentifier && normalizeCpf(user.cpf || "") === identifierCpf;
 
         if (!matchesEmail && !matchesCpf) {
           return user;
@@ -543,9 +553,18 @@ function App() {
       return;
     }
 
+    const hasEmailIdentifier = identifier.includes("@");
+    const hasCpfIdentifier = identifierCpf.length === 11;
+
+    if (!hasEmailIdentifier && !hasCpfIdentifier) {
+      setAuthMessage("Informe um e-mail válido ou CPF com 11 dígitos.");
+      return;
+    }
+
     const matchedUser = registeredUsers.find((user) => {
-      const matchesEmail = user.email === identifier;
-      const matchesCpf = normalizeCpf(user.cpf || "") === cpf;
+      const matchesEmail = hasEmailIdentifier && user.email === identifier;
+      const matchesCpf =
+        hasCpfIdentifier && normalizeCpf(user.cpf || "") === identifierCpf;
 
       return (matchesEmail || matchesCpf) && user.password === password;
     });
@@ -725,23 +744,6 @@ function App() {
                 placeholder={isLogin || isReset ? "voce@exemplo.com ou CPF" : "voce@exemplo.com"}
               />
             </label>
-
-            {isRegister && (
-              <label className="field-group">
-                <span>CPF</span>
-                <input
-                  inputMode="numeric"
-                  value={authForm.cpf}
-                  onChange={(event) =>
-                    setAuthForm((previous) => ({
-                      ...previous,
-                      cpf: formatCpfInput(event.target.value)
-                    }))
-                  }
-                  placeholder="000.000.000-00"
-                />
-              </label>
-            )}
 
             {(isRegister || isReset) && (
               <label className="field-group">

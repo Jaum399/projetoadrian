@@ -31,11 +31,24 @@ body {
     radial-gradient(circle at 12% 0%, rgba(185, 146, 94, 0.1) 0%, transparent 34%),
     radial-gradient(circle at 88% 2%, rgba(17, 17, 17, 0.05) 0%, transparent 28%),
     var(--bg);
+  overflow-x: hidden;
 }
 
 button,
 input {
   font: inherit;
+}
+
+input,
+button,
+.chip,
+.cart-button,
+.add-btn,
+.ghost-btn,
+.password-toggle,
+.category-sidebar button,
+.top-links button {
+  min-height: 44px;
 }
 
 button {
@@ -83,6 +96,7 @@ button {
   gap: 6px;
   overflow-x: auto;
   scrollbar-width: thin;
+  scroll-snap-type: x proximity;
 }
 
 .top-links button {
@@ -94,6 +108,7 @@ button {
   font-size: 0.74rem;
   white-space: nowrap;
   cursor: pointer;
+  scroll-snap-align: start;
 }
 
 .top-links button:hover {
@@ -175,12 +190,14 @@ button {
   display: flex;
   gap: 14px;
   overflow-x: auto;
+  scroll-snap-type: x proximity;
 }
 
 .shipping-strip span {
   font-size: 0.78rem;
   color: #5c4f44;
   white-space: nowrap;
+  scroll-snap-align: start;
 }
 
 .content-grid {
@@ -448,6 +465,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
 }
 
 .auth-switch,
@@ -481,6 +499,7 @@ button {
 }
 
 .field-group input {
+  width: 100%;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   padding: 10px 11px;
@@ -966,7 +985,21 @@ button {
 
   .category-sidebar {
     position: static;
-    order: 2;
+    order: 0;
+    flex-direction: row;
+    align-items: center;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .category-sidebar strong {
+    margin: 0 8px 0 0;
+    white-space: nowrap;
+  }
+
+  .category-sidebar button {
+    white-space: nowrap;
+    flex: 0 0 auto;
   }
 
   .trust-strip {
@@ -1007,13 +1040,98 @@ button {
 
   .beauty-highlights,
   .beauty-gallery,
-  .trust-strip,
+  .trust-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .auth-tabs {
     grid-template-columns: 1fr;
   }
 
   .image-wrapper {
     height: 205px;
+  }
+}
+
+@media (max-width: 640px) {
+  .store-app {
+    padding: 8px;
+  }
+
+  .header-top {
+    padding: 8px 10px;
+  }
+
+  .header-main {
+    padding: 12px 10px;
+  }
+
+  .shipping-strip {
+    padding: 8px 10px;
+  }
+
+  .hero,
+  .hero-overlay {
+    min-height: 250px;
+  }
+
+  .hero-overlay {
+    padding: 14px;
+  }
+
+  .flow-panel {
+    padding: 10px;
+  }
+
+  .auth-form {
+    padding: 10px;
+  }
+
+  .password-field {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .auth-actions .add-btn,
+  .auth-actions .ghost-btn {
+    width: 100%;
+  }
+
+  .product-grid,
+  .beauty-highlights,
+  .beauty-gallery,
+  .trust-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .image-wrapper {
+    height: 195px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-top p {
+    font-size: 0.76rem;
+  }
+
+  .top-links button,
+  .chip {
+    font-size: 0.76rem;
+    padding: 8px 10px;
+  }
+
+  .field-group span,
+  .remember-row,
+  .auth-footnote {
+    font-size: 0.76rem;
   }
 }
 
