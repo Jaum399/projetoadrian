@@ -5,16 +5,21 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:web": "vite --host 127.0.0.1 --port 4174",
+    "dev:api": "vercel dev --listen 4173",
+    "dev:full": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "formidable": "^3.5.4",
     "mongodb": "^6.8.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^9.2.1",
     "vite": "^5.4.2"
   }
 }

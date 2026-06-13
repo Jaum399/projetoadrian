@@ -1,98 +1,106 @@
 export const categories = [
-  "Masculinos",
-  "Femininos",
-  "Perfumes Arabes",
-  "Hidratantes",
-  "Aromaticos"
+  "Skincare",
+  "Maquiagem",
+  "Perfumaria",
+  "Cabelos",
+  "Casa e Limpeza"
 ];
 
 export const products = [
   {
     id: 1,
-    name: "Eau de Parfum Imperial Noir 100ml",
-    category: "Masculinos",
-    price: 259.9,
-    oldPrice: 319.9,
+    name: "Serum Neuro Glow Repair 30ml",
+    category: "Skincare",
+    price: 189.9,
+    oldPrice: 229.9,
     image:
-      "https://images.pexels.com/photos/965989/pexels-photo-965989.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    badge: "Mais vendido",
-    flow: "mais-desejados"
+      "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?auto=format&fit=crop&w=1200&q=80",
+    badge: "Novo drop",
+    flow: "novidades",
+    active: true
   },
   {
     id: 2,
-    name: "Eau de Parfum Velvet Rose 100ml",
-    category: "Femininos",
-    price: 139.9,
-    oldPrice: 179.9,
+    name: "Base Soft Blur Velvet FPS 35",
+    category: "Maquiagem",
+    price: 129.9,
+    oldPrice: 159.9,
     image:
-      "https://images.pexels.com/photos/1190829/pexels-photo-1190829.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    badge: "Novo",
-    flow: "promocoes"
+      "https://images.unsplash.com/photo-1631730486787-33d6f6c7c5c7?auto=format&fit=crop&w=1200&q=80",
+    badge: "Best seller",
+    flow: "autocuidado",
+    active: true
   },
   {
     id: 3,
-    name: "Attar Royale Desert Oud 90ml",
-    category: "Perfumes Arabes",
-    price: 89.9,
-    oldPrice: 109.9,
+    name: "Parfum Eclipse Saffron 80ml",
+    category: "Perfumaria",
+    price: 279.9,
+    oldPrice: 329.9,
     image:
-      "https://images.pexels.com/photos/1961792/pexels-photo-1961792.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    badge: "Oferta",
-    flow: "promocoes"
+      "https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=1200&q=80",
+    badge: "Assinatura",
+    flow: "novidades",
+    active: true
   },
   {
     id: 4,
-    name: "Hidratante Amber Silk 240ml",
-    category: "Hidratantes",
-    price: 74.9,
-    oldPrice: 94.9,
+    name: "Mascara Molecular Repair 250g",
+    category: "Cabelos",
+    price: 99.9,
+    oldPrice: 124.9,
     image:
-      "https://images.unsplash.com/photo-1522338140262-f46f5913618a?auto=format&fit=crop&w=800&q=80",
-    badge: "Top avaliacao",
-    flow: "combos"
+      "https://images.unsplash.com/photo-1526947425960-945c6e72858f?auto=format&fit=crop&w=1200&q=80",
+    badge: "Rotina pro",
+    flow: "autocuidado",
+    active: true
   },
   {
     id: 5,
-    name: "Eau Fraiche Citrus Bloom 75ml",
-    category: "Aromaticos",
-    price: 59.9,
-    oldPrice: 79.9,
+    name: "Multi Cleaner Signature Kitchen 500ml",
+    category: "Casa e Limpeza",
+    price: 44.9,
+    oldPrice: 59.9,
     image:
-      "https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?auto=format&fit=crop&w=800&q=80",
-    badge: "Leve 2",
-    flow: "mais-desejados"
+      "https://images.unsplash.com/photo-1583947582886-f40ec95dd752?auto=format&fit=crop&w=1200&q=80",
+    badge: "Alta rotacao",
+    flow: "casa-impecavel",
+    active: true
   },
   {
     id: 6,
-    name: "Kit Presente Signature Black",
-    category: "Masculinos",
-    price: 349.9,
-    oldPrice: 429.9,
+    name: "Kit Lavanderia Soft Touch",
+    category: "Casa e Limpeza",
+    price: 74.9,
+    oldPrice: 96.9,
     image:
-      "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=80",
-    badge: "Edicao limitada",
-    flow: "combos"
+      "https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?auto=format&fit=crop&w=1200&q=80",
+    badge: "Combo smart",
+    flow: "casa-impecavel",
+    active: true
   },
   {
     id: 7,
-    name: "Duo Romantic Bloom + Body Mist",
-    category: "Femininos",
-    price: 189.9,
-    oldPrice: 249.9,
+    name: "Lip Oil Prism Nude",
+    category: "Maquiagem",
+    price: 54.9,
+    oldPrice: 69.9,
     image:
-      "https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=800&q=80",
-    badge: "Combo",
-    flow: "combos"
+      "https://images.unsplash.com/photo-1586495777744-4413f21062fa?auto=format&fit=crop&w=1200&q=80",
+    badge: "Trend",
+    flow: "novidades",
+    active: true
   },
   {
     id: 8,
-    name: "Elixir Oud Intense 100ml",
-    category: "Perfumes Arabes",
-    price: 299.9,
-    oldPrice: 369.9,
+    name: "Creme Corporal Satin Amber 240ml",
+    category: "Skincare",
+    price: 79.9,
+    oldPrice: 99.9,
     image:
-      "https://images.unsplash.com/photo-1590736969955-71cc94901144?auto=format&fit=crop&w=800&q=80",
-    badge: "Lançamento",
-    flow: "mais-desejados"
+      "https://images.unsplash.com/photo-1619451334792-150fd785ee74?auto=format&fit=crop&w=1200&q=80",
+    badge: "Glow body",
+    flow: "autocuidado",
+    active: true
   }
 ];

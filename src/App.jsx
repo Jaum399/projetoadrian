@@ -1,172 +1,58 @@
 import { useEffect, useMemo, useState } from "react";
-import { products as fallbackProducts } from "./data/products";
 import { frontendFlows, imageConfig } from "./config/storeConfig";
+import { products as fallbackProducts } from "./data/products";
+import {
+  AccountPanel,
+  AdminPanel,
+  AuthPanel,
+  HomeCallout,
+  OrdersPanel,
+  SupportPanel,
+  TrackingPanel,
+  WishlistPanel
+} from "./components/FlowPanels";
+import {
+  CartDrawer,
+  GallerySection,
+  HeroSection,
+  HighlightsSection,
+  ProductCatalogSection
+} from "./components/StoreSections";
+import {
+  ADMIN_PRODUCT_DEFAULT,
+  AUTH_DEFAULT_FORM,
+  AUTH_REMEMBERED_EMAIL_KEY,
+  AUTH_SESSION_KEY,
+  AUTH_USERS_KEY,
+  ORDER_HISTORY_KEY,
+  WISHLIST_KEY,
+  createTrackingCode,
+  getJson,
+  getPasswordStrength,
+  normalizeCpf,
+  normalizeIdentifier,
+  readLocalJson
+} from "./lib/storeUi";
 
-const ILLUSTRATIVE_PLACEHOLDER = `data:image/svg+xml;utf8,${encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#182742"/><stop offset="100%" stop-color="#6f78ff"/></linearGradient></defs><rect width="1200" height="800" fill="url(#g)"/><circle cx="250" cy="120" r="180" fill="#5fe6ff" fill-opacity="0.18"/><circle cx="980" cy="720" r="240" fill="#a68cff" fill-opacity="0.2"/><text x="50%" y="52%" fill="#e9f4ff" font-size="62" font-family="Sora, Arial" text-anchor="middle">Imagem Ilustrativa</text></svg>`
-)}`;
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").trim();
+const ALLOW_LOCAL_AUTH_FALLBACK =
+  String(import.meta.env.VITE_ALLOW_LOCAL_AUTH_FALLBACK || "false").toLowerCase() === "true";
 
-const IMAGE_FALLBACK_PHOTO =
-  "https://images.pexels.com/photos/965989/pexels-photo-965989.jpeg?auto=compress&cs=tinysrgb&w=1200";
-
-const AUTH_USERS_KEY = "adrian-beauty-users";
-const AUTH_SESSION_KEY = "adrian-beauty-session";
-const ORDER_HISTORY_KEY = "adrian-beauty-orders";
-const WISHLIST_KEY = "adrian-beauty-wishlist";
-
-const AUTH_DEFAULT_FORM = {
-  name: "",
-  cpf: "",
-  email: "",
-  password: "",
-  confirmPassword: ""
-};
-
-const AUTH_REMEMBERED_EMAIL_KEY = "adrian-beauty-auth-email";
-
-const TRACKING_STATUS_STEPS = [
-  "Pedido recebido",
-  "Pagamento aprovado",
-  "Em separacao",
-  "Enviado"
-];
-
-const beautyHighlights = [
-  {
-    id: "sensorial",
-    title: "Jornada Sensorial",
-    subtitle: "Aromas, texturas e cuidado premium no seu ritual.",
-    image:
-      "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80"
-  },
-  {
-    id: "rotina",
-    title: "Rotina Inteligente",
-    subtitle: "Selecoes para dia, noite e ocasiões especiais.",
-    image:
-      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1200&q=80"
-  },
-  {
-    id: "signature",
-    title: "Colecao Signature",
-    subtitle: "Fragrancias e skincare em edicao curada.",
-    image:
-      "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=1200&q=80"
+function buildApiUrl(path) {
+  if (!API_BASE_URL) {
+    return path;
   }
-];
 
-const beautyGallery = [
-  {
-    id: "g1",
-    label: "Glow Atelier",
-    image:
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1400&q=80"
-  },
-  {
-    id: "g2",
-    label: "Studio Perfumaria",
-    image:
-      "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=1400&q=80"
-  }
-];
-
-function formatPrice(value) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL"
-  }).format(value);
+  return `${API_BASE_URL}${path}`;
 }
 
-function getDefaultConfig() {
-  return {
-    imageConfig: JSON.parse(JSON.stringify(imageConfig)),
-    frontendFlows: JSON.parse(JSON.stringify(frontendFlows))
-  };
-}
-
-function withImageFallback(event) {
-  const stage = event.currentTarget.dataset.fallbackStage || "0";
-
-  if (stage === "0") {
-    event.currentTarget.dataset.fallbackStage = "1";
-    event.currentTarget.src = IMAGE_FALLBACK_PHOTO;
-    return;
+// Helper to handle API responses and detect session expiry
+function handleApiResponse(response) {
+  if (response.status === 401) {
+    // Session expired or invalid - this will be handled by the caller
+    return { isSessionExpired: true, response };
   }
-
-  if (stage === "1") {
-    event.currentTarget.dataset.fallbackStage = "2";
-    event.currentTarget.src = ILLUSTRATIVE_PLACEHOLDER;
-    return;
-  }
-}
-
-function readLocalJson(key, fallbackValue) {
-  if (typeof window === "undefined") {
-    return fallbackValue;
-  }
-
-  try {
-    const rawValue = localStorage.getItem(key);
-    return rawValue ? JSON.parse(rawValue) : fallbackValue;
-  } catch {
-    return fallbackValue;
-  }
-}
-
-function formatOrderDate(value) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric"
-  }).format(new Date(value));
-}
-
-function createTrackingCode(orderId) {
-  return `LP${String(orderId).replace(/\D/g, "").slice(-8).padStart(8, "0")}`;
-}
-
-function normalizeCpf(value) {
-  return value.replace(/\D/g, "").slice(0, 11);
-}
-
-function normalizeIdentifier(value) {
-  return value.trim().toLowerCase();
-}
-
-function getPasswordStrength(password) {
-  const value = password.trim();
-
-  if (!value) {
-    return { label: "Senha vazia", score: 0 };
-  }
-
-  let score = 0;
-  if (value.length >= 8) score += 1;
-  if (/[A-Z]/.test(value)) score += 1;
-  if (/[0-9]/.test(value)) score += 1;
-  if (/[^A-Za-z0-9]/.test(value)) score += 1;
-
-  if (score <= 1) {
-    return { label: "Fraca", score };
-  }
-
-  if (score === 2) {
-    return { label: "Média", score };
-  }
-
-  return { label: "Forte", score };
-}
-
-function formatCpfInput(value) {
-  const digits = normalizeCpf(value);
-
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
-  if (digits.length <= 9) {
-    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
-  }
-
-  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+  return { isSessionExpired: false, response };
 }
 
 function App() {
@@ -178,6 +64,8 @@ function App() {
   const [authMessage, setAuthMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberLogin, setRememberLogin] = useState(true);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+
   const [currentUser, setCurrentUser] = useState(() =>
     readLocalJson(AUTH_SESSION_KEY, null)
   );
@@ -203,82 +91,40 @@ function App() {
   const [trackingInput, setTrackingInput] = useState("");
   const [trackingResult, setTrackingResult] = useState(null);
 
-  const configState = useMemo(getDefaultConfig, []);
   const [allProducts, setAllProducts] = useState(fallbackProducts);
-  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [catalogNotice, setCatalogNotice] = useState("");
+  const [catalogSource, setCatalogSource] = useState("fallback");
+  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+  const [activeBanner, setActiveBanner] = useState(imageConfig.heroBanners[0].id);
 
-  const [activeBanner, setActiveBanner] = useState(configState.imageConfig.heroBanners[0].id);
+  const [adminForm, setAdminForm] = useState(ADMIN_PRODUCT_DEFAULT);
+  const [adminMessage, setAdminMessage] = useState("");
+  const [isAdminSaving, setIsAdminSaving] = useState(false);
+  const [isImageUploading, setIsImageUploading] = useState(false);
 
-  useEffect(() => {
-    let ignore = false;
+  const isAdmin = currentUser?.role === "admin";
 
-    async function loadCatalog() {
-      try {
-        setIsCatalogLoading(true);
-        setCatalogNotice("");
-
-        const response = await fetch("/api/products");
-        if (!response.ok) {
-          throw new Error("Falha ao carregar catalogo");
-        }
-
-        const payload = await response.json();
-        const nextProducts = Array.isArray(payload?.products) ? payload.products : [];
-
-        if (ignore) {
-          return;
-        }
-
-        if (nextProducts.length > 0) {
-          setAllProducts(nextProducts);
-        } else {
-          setAllProducts(fallbackProducts);
-        }
-
-        if (payload?.source === "fallback" && payload?.message) {
-          setCatalogNotice(payload.message);
-        }
-      } catch {
-        if (ignore) {
-          return;
-        }
-
-        setAllProducts(fallbackProducts);
-        setCatalogNotice("Sem conexao com API. Exibindo catalogo ilustrativo local.");
-      } finally {
-        if (!ignore) {
-          setIsCatalogLoading(false);
-        }
-      }
+  const accountLinks = useMemo(() => {
+    if (!isAdmin) {
+      return frontendFlows.accountLinks;
     }
 
-    loadCatalog();
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+    return [...frontendFlows.accountLinks, { key: "admin", label: "Area Admin" }];
+  }, [isAdmin]);
 
   const categories = useMemo(() => {
-    const values = [];
+    const nextCategories = [];
 
     allProducts.forEach((product) => {
-      if (typeof product?.category !== "string" || !product.category.trim()) {
+      if (!product?.category || nextCategories.includes(product.category)) {
         return;
       }
 
-      if (!values.includes(product.category)) {
-        values.push(product.category);
-      }
+      nextCategories.push(product.category);
     });
 
-    return values;
+    return nextCategories;
   }, [allProducts]);
-
-  const currentBanner =
-    configState.imageConfig.heroBanners.find((banner) => banner.id === activeBanner) ||
-    configState.imageConfig.heroBanners[0];
 
   const visibleProducts = useMemo(() => {
     return allProducts.filter((product) => {
@@ -299,6 +145,14 @@ function App() {
     [cartItems]
   );
 
+  const currentUserOrders = useMemo(() => {
+    if (!currentUser?.email) {
+      return [];
+    }
+
+    return orderHistory.filter((order) => order.customer === currentUser.email);
+  }, [currentUser, orderHistory]);
+
   useEffect(() => {
     localStorage.setItem(AUTH_USERS_KEY, JSON.stringify(registeredUsers));
   }, [registeredUsers]);
@@ -306,10 +160,15 @@ function App() {
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(currentUser));
+      // Also save session token separately for easy access in API calls
+      if (currentUser.sessionToken) {
+        localStorage.setItem("x-session-token", currentUser.sessionToken);
+      }
       return;
     }
 
     localStorage.removeItem(AUTH_SESSION_KEY);
+    localStorage.removeItem("x-session-token");
   }, [currentUser]);
 
   useEffect(() => {
@@ -321,10 +180,6 @@ function App() {
   }, [wishlistItems]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
     if (rememberedEmail) {
       window.localStorage.setItem(AUTH_REMEMBERED_EMAIL_KEY, rememberedEmail);
       return;
@@ -332,6 +187,37 @@ function App() {
 
     window.localStorage.removeItem(AUTH_REMEMBERED_EMAIL_KEY);
   }, [rememberedEmail]);
+
+  async function loadCatalog() {
+    try {
+      setIsCatalogLoading(true);
+      const response = await fetch(buildApiUrl("/api/products"));
+      const payload = await getJson(response);
+      const nextProducts = Array.isArray(payload?.products) ? payload.products : [];
+
+      setAllProducts(nextProducts.length > 0 ? nextProducts : fallbackProducts);
+      setCatalogNotice(payload?.message || "");
+      setCatalogSource(payload?.source || "fallback");
+    } catch {
+      setAllProducts(fallbackProducts);
+      setCatalogNotice("Sem conexao com a API. Exibindo vitrine local.");
+      setCatalogSource("fallback");
+    } finally {
+      setIsCatalogLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadCatalog();
+  }, []);
+
+  function setAuthField(field, value) {
+    setAuthForm((previous) => ({ ...previous, [field]: value }));
+  }
+
+  function setAdminField(field, value) {
+    setAdminForm((previous) => ({ ...previous, [field]: value }));
+  }
 
   function addToCart(product) {
     setCartItems((previous) => {
@@ -379,57 +265,92 @@ function App() {
         ...AUTH_DEFAULT_FORM,
         email: rememberedEmail || previous.email
       }));
-      setRememberLogin(true);
-      return;
-    }
-
-    if (view === "reset") {
-      setAuthForm(AUTH_DEFAULT_FORM);
       return;
     }
 
     setAuthForm(AUTH_DEFAULT_FORM);
   }
 
-  function handleFlowAction(key) {
-    if (key === "login" || key === "register") {
-      openAuthView(key === "register" ? "register" : "login");
-      return;
-    }
+  function getLocalAuthResult(action, payload) {
+    const identifier = normalizeIdentifier(payload.email);
+    const identifierCpf = normalizeCpf(identifier);
+    const password = payload.password.trim();
+    const cpf = normalizeCpf(payload.cpf);
 
-    if (key === "support") {
-      setActiveFlow("support");
-      return;
-    }
+    if (action === "register") {
+      const emailExists = registeredUsers.some((user) => user.email === identifier);
+      const cpfExists = registeredUsers.some(
+        (user) => normalizeCpf(user.cpf || "") === cpf
+      );
 
-    if (key === "account") {
-      if (currentUser) {
-        setActiveFlow("account");
-      } else {
-        openAuthView("login");
+      if (emailExists || cpfExists) {
+        throw new Error("E-mail ou CPF ja cadastrados neste navegador.");
       }
-      return;
+
+      const nextUser = {
+        name: payload.name.trim(),
+        cpf,
+        email: identifier,
+        password,
+        role: "customer"
+      };
+
+      setRegisteredUsers((previous) => [...previous, nextUser]);
+      return {
+        user: nextUser,
+        message: "Conta criada localmente neste navegador.",
+        source: "fallback"
+      };
     }
 
-    if (key === "orders") {
-      setActiveFlow("orders");
-      return;
+    if (action === "reset") {
+      const hasEmailIdentifier = identifier.includes("@");
+      const hasCpfIdentifier = identifierCpf.length === 11;
+      let changed = false;
+
+      setRegisteredUsers((previous) =>
+        previous.map((user) => {
+          const matchesEmail = hasEmailIdentifier && user.email === identifier;
+          const matchesCpf =
+            hasCpfIdentifier && normalizeCpf(user.cpf || "") === identifierCpf;
+
+          if (!matchesEmail && !matchesCpf) {
+            return user;
+          }
+
+          changed = true;
+          return { ...user, password };
+        })
+      );
+
+      if (!changed) {
+        throw new Error("Nenhuma conta encontrada para redefinicao local.");
+      }
+
+      return {
+        message: "Senha atualizada localmente.",
+        source: "fallback"
+      };
     }
 
-    if (key === "wishlist") {
-      setActiveFlow("wishlist");
-      return;
+    const matchedUser = registeredUsers.find((user) => {
+      const matchesEmail = identifier.includes("@") && user.email === identifier;
+      const matchesCpf = identifierCpf.length === 11 && normalizeCpf(user.cpf) === identifierCpf;
+      return (matchesEmail || matchesCpf) && user.password === password;
+    });
+
+    if (!matchedUser) {
+      throw new Error("Credenciais invalidas. Verifique e tente novamente.");
     }
 
-    if (key === "tracking") {
-      setActiveFlow("tracking");
-      return;
-    }
-
-    setActiveFlow("home");
+    return {
+      user: matchedUser,
+      message: "Login local realizado com sucesso.",
+      source: "fallback"
+    };
   }
 
-  function handleAuthSubmit(event) {
+  async function handleAuthSubmit(event) {
     event.preventDefault();
 
     const identifier = normalizeIdentifier(authForm.email);
@@ -444,151 +365,181 @@ function App() {
         setAuthMessage("Informe seu nome para criar a conta.");
         return;
       }
-
       if (!identifier.includes("@")) {
-        setAuthMessage("Informe um e-mail válido para o cadastro.");
+        setAuthMessage("Informe um e-mail valido para o cadastro.");
         return;
       }
-
       if (cpf.length !== 11) {
-        setAuthMessage("Informe um CPF válido com 11 dígitos.");
+        setAuthMessage("Informe um CPF valido com 11 digitos.");
         return;
       }
-
       if (!password || password.length < 8) {
         setAuthMessage("A senha precisa ter pelo menos 8 caracteres.");
         return;
       }
-
       if (password !== confirmPassword) {
-        setAuthMessage("A confirmação de senha não confere.");
+        setAuthMessage("A confirmacao de senha nao confere.");
         return;
       }
-
       if (getPasswordStrength(password).score < 2) {
-        setAuthMessage("Use uma senha mais forte com letras e números.");
+        setAuthMessage("Use uma senha mais forte com letras, numeros ou simbolos.");
         return;
       }
-
-      const emailExists = registeredUsers.some((user) => user.email === identifier);
-      if (emailExists) {
-        setAuthMessage("Este e-mail já possui cadastro.");
-        return;
-      }
-
-      const cpfExists = registeredUsers.some(
-        (user) => normalizeCpf(user.cpf || "") === cpf
-      );
-      if (cpfExists) {
-        setAuthMessage("Este CPF já possui cadastro.");
-        return;
-      }
-
-      const nextUser = { name, cpf, email: identifier, password };
-      setRegisteredUsers((previous) => [...previous, nextUser]);
-      setCurrentUser({ name, cpf, email: identifier });
-      setRememberedEmail(identifier);
-      setAuthForm(AUTH_DEFAULT_FORM);
-      setAuthMessage("Conta criada com sucesso. Você já entrou.");
-      setActiveFlow("account");
-      setAuthView("login");
-      return;
     }
 
     if (authView === "reset") {
       if (!identifier) {
-        setAuthMessage("Informe o e-mail ou CPF da conta para redefinir a senha.");
+        setAuthMessage("Informe o e-mail ou CPF da conta.");
         return;
       }
-
-      const hasEmailIdentifier = identifier.includes("@");
-      const hasCpfIdentifier = identifierCpf.length === 11;
-
-      if (!hasEmailIdentifier && !hasCpfIdentifier) {
-        setAuthMessage("Informe um e-mail válido ou CPF com 11 dígitos.");
+      if (!identifier.includes("@") && identifierCpf.length !== 11) {
+        setAuthMessage("Informe um e-mail valido ou CPF com 11 digitos.");
         return;
       }
-
       if (!password || password.length < 8) {
         setAuthMessage("Crie uma nova senha com pelo menos 8 caracteres.");
         return;
       }
-
       if (password !== confirmPassword) {
-        setAuthMessage("A confirmação de senha não confere.");
+        setAuthMessage("A confirmacao de senha nao confere.");
         return;
       }
+    }
 
-      const updatedUsers = registeredUsers.map((user) => {
-        const matchesEmail = hasEmailIdentifier && user.email === identifier;
-        const matchesCpf =
-          hasCpfIdentifier && normalizeCpf(user.cpf || "") === identifierCpf;
+    if (authView === "login") {
+      if (!identifier || !password) {
+        setAuthMessage("Preencha e-mail ou CPF e a senha para continuar.");
+        return;
+      }
+      if (!identifier.includes("@") && identifierCpf.length !== 11) {
+        setAuthMessage("Informe um e-mail valido ou CPF com 11 digitos.");
+        return;
+      }
+    }
 
-        if (!matchesEmail && !matchesCpf) {
-          return user;
+    try {
+      setIsAuthLoading(true);
+      let payload;
+
+      try {
+        const response = await fetch(buildApiUrl("/api/auth"), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(
+            authView === "login"
+              ? { action: "login", identifier, password }
+              : authView === "reset"
+                ? { action: "reset", identifier, password }
+                : { action: "register", name, cpf, email: identifier, password }
+          )
+        });
+
+        payload = await getJson(response);
+      } catch (error) {
+        const isNetworkFailure =
+          error instanceof TypeError || /fetch|network/i.test(String(error.message || ""));
+
+        if (!isNetworkFailure || !ALLOW_LOCAL_AUTH_FALLBACK) {
+          throw error;
         }
 
-        return {
-          ...user,
+        payload = getLocalAuthResult(authView, {
+          name,
+          cpf,
+          email: identifier,
           password
-        };
-      });
+        });
+      }
 
-      const changed = updatedUsers.some((user, index) => user !== registeredUsers[index]);
+      if (payload?.source === "fallback") {
+        payload = getLocalAuthResult(authView, {
+          name,
+          cpf,
+          email: identifier,
+          password
+        });
+      }
 
-      if (!changed) {
-        setAuthMessage("Nenhuma conta foi localizada com esses dados.");
+      if (authView === "reset") {
+        setAuthForm(AUTH_DEFAULT_FORM);
+        setAuthView("login");
+        setAuthMessage(payload.message || "Senha atualizada com sucesso.");
         return;
       }
 
-      setRegisteredUsers(updatedUsers);
+      const sessionUser = {
+        name: payload.user.name,
+        cpf: normalizeCpf(payload.user.cpf || ""),
+        email: payload.user.email,
+        role: payload.user.role || "customer",
+        sessionToken: payload.sessionToken || ""
+      };
+
+      setCurrentUser(sessionUser);
+      setRememberedEmail(rememberLogin ? sessionUser.email : "");
       setAuthForm(AUTH_DEFAULT_FORM);
-      setAuthView("login");
-      setAuthMessage("Senha atualizada. Use a nova senha para entrar.");
-      return;
+      setAuthMessage(payload.message || "Login realizado com sucesso.");
+      setActiveFlow(sessionUser.role === "admin" ? "admin" : "account");
+    } catch (error) {
+      const isNetworkFailure =
+        error instanceof TypeError || /fetch|network/i.test(String(error.message || ""));
+
+      if (isNetworkFailure && !ALLOW_LOCAL_AUTH_FALLBACK) {
+        setAuthMessage(
+          "API de autenticacao indisponivel. Inicie o backend local completo ou configure VITE_API_BASE_URL."
+        );
+      } else {
+        setAuthMessage(error.message || "Nao foi possivel autenticar.");
+      }
+    } finally {
+      setIsAuthLoading(false);
     }
-
-    if (!identifier || !password) {
-      setAuthMessage("Preencha e-mail/CPF e senha para continuar.");
-      return;
-    }
-
-    const hasEmailIdentifier = identifier.includes("@");
-    const hasCpfIdentifier = identifierCpf.length === 11;
-
-    if (!hasEmailIdentifier && !hasCpfIdentifier) {
-      setAuthMessage("Informe um e-mail válido ou CPF com 11 dígitos.");
-      return;
-    }
-
-    const matchedUser = registeredUsers.find((user) => {
-      const matchesEmail = hasEmailIdentifier && user.email === identifier;
-      const matchesCpf =
-        hasCpfIdentifier && normalizeCpf(user.cpf || "") === identifierCpf;
-
-      return (matchesEmail || matchesCpf) && user.password === password;
-    });
-
-    if (!matchedUser) {
-      setAuthMessage("Credenciais inválidas. Verifique e tente novamente.");
-      return;
-    }
-
-    setCurrentUser({
-      name: matchedUser.name,
-      cpf: normalizeCpf(matchedUser.cpf || ""),
-      email: matchedUser.email
-    });
-    setRememberedEmail(rememberLogin ? matchedUser.email : "");
-    setAuthForm(AUTH_DEFAULT_FORM);
-    setAuthMessage("Login realizado com sucesso.");
-    setActiveFlow("account");
   }
 
-  function handleLogout() {
-    setCurrentUser(null);
-    setActiveFlow("home");
-    setAuthMessage("Você saiu da conta.");
+  async function handleLogout() {
+    try {
+      const sessionToken = localStorage.getItem("x-session-token");
+      
+      // Call logout API if there's an active session
+      if (sessionToken) {
+        try {
+          const response = await fetch(buildApiUrl("/api/auth"), {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json",
+              "x-session-token": sessionToken 
+            },
+            body: JSON.stringify({ action: "logout" })
+          });
+          
+          // Log the API response but don't fail the local logout if API fails
+          if (!response.ok) {
+            console.warn("API logout failed, clearing local session anyway");
+          }
+        } catch (error) {
+          console.warn("Could not reach API for logout:", error);
+        }
+      }
+      
+      // Clear all auth state from localStorage
+      localStorage.removeItem("x-session-token");
+      localStorage.removeItem("current-user");
+      
+      // Clear from React state
+      setCurrentUser(null);
+      setActiveFlow("home");
+      setAuthMessage("Voce saiu da conta. Sessao encerrada com sucesso.");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Still clear local state even if there's an error
+      localStorage.removeItem("x-session-token");
+      localStorage.removeItem("current-user");
+      setCurrentUser(null);
+      setActiveFlow("home");
+      setAuthMessage("Sessao encerrada.");
+    }
   }
 
   function handleCheckout() {
@@ -610,7 +561,7 @@ function App() {
       total: subtotal,
       items: cartItems,
       customer: currentUser.email,
-      status: "Em processamento",
+      status: "Em curadoria",
       trackingCode: createTrackingCode(orderId)
     };
 
@@ -623,8 +574,8 @@ function App() {
 
   function handleTrackOrder(event) {
     event.preventDefault();
-
     const normalized = trackingInput.trim().toUpperCase();
+
     if (!normalized) {
       setTrackingResult({
         found: false,
@@ -645,468 +596,291 @@ function App() {
       return;
     }
 
-    setTrackingResult({
-      found: true,
-      order: matched
+    setTrackingResult({ found: true, order: matched });
+  }
+
+  function handleFlowAction(key) {
+    if (key === "login" || key === "register") {
+      openAuthView(key === "register" ? "register" : "login");
+      return;
+    }
+
+    if (key === "admin") {
+      if (isAdmin) {
+        setActiveFlow("admin");
+      } else {
+        setAuthMessage("Somente o owner pode acessar a area administrativa.");
+        openAuthView("login");
+      }
+      return;
+    }
+
+    if (key === "account") {
+      if (currentUser) {
+        setActiveFlow("account");
+      } else {
+        openAuthView("login");
+      }
+      return;
+    }
+
+    setActiveFlow(key);
+  }
+
+  function handleCategoryMenuClick(category) {
+    setSelectedCategory(category);
+    setActiveFlow("home");
+  }
+
+  function fillAdminForm(product) {
+    setAdminMessage("");
+    setActiveFlow("admin");
+    setAdminForm({
+      id: product.id,
+      name: product.name,
+      category: product.category,
+      price: String(product.price),
+      oldPrice: String(product.oldPrice),
+      image: product.image,
+      badge: product.badge,
+      flow: product.flow,
+      active: product.active !== false
     });
   }
 
-  const renderFlowPanel = () => {
-    if (activeFlow === "auth") {
-      const isLogin = authView === "login";
-      const isRegister = authView === "register";
-      const isReset = authView === "reset";
-      const authTitle = isRegister
-        ? "Criar sua conta"
-        : isReset
-          ? "Recuperar acesso"
-          : "Entrar na sua conta";
-      const authDescription = isRegister
-        ? "Cadastre-se para acompanhar pedidos, finalizar compras e salvar sua experiência."
-        : isReset
-          ? "Redefina sua senha com segurança e volte a acessar sua conta em poucos passos."
-          : "Use e-mail ou CPF para entrar rapidamente e retomar seus pedidos, desejos e checkout.";
-      const primaryLabel = isRegister
-        ? "Criar conta"
-        : isReset
-          ? "Atualizar senha"
-          : "Entrar";
+  function resetAdminForm() {
+    setAdminForm(ADMIN_PRODUCT_DEFAULT);
+    setAdminMessage("");
+  }
 
-      return (
-        <section className="flow-panel auth-panel">
-          <div className="flow-copy">
-            <p className="flow-kicker">Acesso seguro</p>
-            <h3>{authTitle}</h3>
-            <p>{authDescription}</p>
-            <div className="flow-benefits auth-benefits">
-              <span>{isRegister ? "Cadastro em 1 minuto" : "Checkout protegido"}</span>
-              <span>{isReset ? "Recuperação local" : "Histórico local de pedidos"}</span>
-              <span>{isLogin ? "Acesso por e-mail ou CPF" : "Atalho para minha conta"}</span>
-            </div>
-            <div className="auth-steps">
-              <span>1. Escolha o fluxo</span>
-              <span>2. Preencha os dados</span>
-              <span>3. Entre ou atualize a senha</span>
-            </div>
-          </div>
-
-          <form className="auth-form" onSubmit={handleAuthSubmit}>
-            <div className="auth-switch auth-tabs">
-              <button type="button" className={isLogin ? "chip active" : "chip"} onClick={() => openAuthView("login")}>
-                Login
-              </button>
-              <button type="button" className={isRegister ? "chip active" : "chip"} onClick={() => openAuthView("register")}>
-                Cadastro
-              </button>
-              <button type="button" className={isReset ? "chip active" : "chip"} onClick={() => openAuthView("reset")}>
-                Recuperar senha
-              </button>
-            </div>
-
-            {isRegister && (
-              <>
-                <label className="field-group">
-                  <span>Nome completo</span>
-                  <input
-                    value={authForm.name}
-                    onChange={(event) =>
-                      setAuthForm((previous) => ({ ...previous, name: event.target.value }))
-                    }
-                    placeholder="Seu nome"
-                  />
-                </label>
-
-                <label className="field-group">
-                  <span>CPF</span>
-                  <input
-                    inputMode="numeric"
-                    value={authForm.cpf}
-                    onChange={(event) =>
-                      setAuthForm((previous) => ({
-                        ...previous,
-                        cpf: formatCpfInput(event.target.value)
-                      }))
-                    }
-                    placeholder="000.000.000-00"
-                  />
-                </label>
-              </>
-            )}
-
-            <label className="field-group">
-              <span>{isLogin || isReset ? "E-mail ou CPF" : "E-mail"}</span>
-              <input
-                type={isLogin || isReset ? "text" : "email"}
-                value={authForm.email}
-                onChange={(event) =>
-                  setAuthForm((previous) => ({ ...previous, email: event.target.value }))
-                }
-                placeholder={isLogin || isReset ? "voce@exemplo.com ou CPF" : "voce@exemplo.com"}
-              />
-            </label>
-
-            {(isRegister || isReset) && (
-              <label className="field-group">
-                <span>{isReset ? "Nova senha" : "Senha"}</span>
-                <div className="password-field">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={authForm.password}
-                    onChange={(event) =>
-                      setAuthForm((previous) => ({ ...previous, password: event.target.value }))
-                    }
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    className="password-toggle"
-                    onClick={() => setShowPassword((previous) => !previous)}
-                  >
-                    {showPassword ? "Ocultar" : "Mostrar"}
-                  </button>
-                </div>
-              </label>
-            )}
-
-            {(isRegister || isReset) && (
-              <label className="field-group">
-                <span>Confirmar senha</span>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={authForm.confirmPassword}
-                  onChange={(event) =>
-                    setAuthForm((previous) => ({
-                      ...previous,
-                      confirmPassword: event.target.value
-                    }))
-                  }
-                  placeholder="Repita a senha"
-                />
-              </label>
-            )}
-
-            {isLogin && (
-              <label className="remember-row">
-                <input
-                  type="checkbox"
-                  checked={rememberLogin}
-                  onChange={(event) => setRememberLogin(event.target.checked)}
-                />
-                <span>Lembrar meu e-mail neste navegador</span>
-              </label>
-            )}
-
-            {(isRegister || isReset || isLogin) && authForm.password && (
-              <div className="strength-meter" aria-live="polite">
-                <span
-                  className={
-                    getPasswordStrength(authForm.password).score >= 3
-                      ? "strength strong"
-                      : getPasswordStrength(authForm.password).score === 2
-                        ? "strength medium"
-                        : "strength weak"
-                  }
-                />
-                <p>Força da senha: {getPasswordStrength(authForm.password).label}</p>
-              </div>
-            )}
-
-            {isLogin && (
-              <button
-                type="button"
-                className="link-button"
-                onClick={() => openAuthView("reset")}
-              >
-                Esqueci minha senha
-              </button>
-            )}
-
-            <div className="auth-actions">
-              <button type="submit" className="add-btn">
-                {primaryLabel}
-              </button>
-              <button
-                type="button"
-                className="ghost-btn"
-                onClick={() => {
-                  setAuthForm(AUTH_DEFAULT_FORM);
-                  setAuthMessage("");
-                  setShowPassword(false);
-                }}
-              >
-                Limpar
-              </button>
-            </div>
-
-            <p className="auth-footnote">
-              {isLogin
-                ? "Use CPF se quiser entrar sem lembrar o e-mail cadastrado."
-                : isReset
-                  ? "A alteração vale imediatamente para o próximo acesso."
-                  : "Seu cadastro é salvo localmente neste navegador para testes do fluxo."}
-            </p>
-
-            {authMessage && <p className="flow-message">{authMessage}</p>}
-          </form>
-        </section>
-      );
-    }
-
-    if (activeFlow === "account") {
-      return (
-        <section className="flow-panel account-panel">
-          <div className="flow-copy">
-            <p className="flow-kicker">Minha conta</p>
-            <h3>{currentUser ? `Olá, ${currentUser.name}` : "Acesse sua conta"}</h3>
-            <p>
-              Consulte seus dados, pedidos recentes e acompanhe sua rotina de compras.
-            </p>
-          </div>
-
-          {currentUser ? (
-            <div className="account-grid">
-              <article className="info-card">
-                <strong>Dados da conta</strong>
-                <p>{currentUser.name}</p>
-                <p>{currentUser.cpf ? formatCpfInput(currentUser.cpf) : "CPF não informado"}</p>
-                <p>{currentUser.email}</p>
-                <button type="button" className="ghost-btn" onClick={handleLogout}>
-                  Sair
-                </button>
-              </article>
-
-              <article className="info-card">
-                <strong>Pedidos recentes</strong>
-                {currentUserOrders.length === 0 ? (
-                  <p>Sem pedidos ainda. Finalize sua primeira compra.</p>
-                ) : (
-                  <div className="mini-list">
-                    {currentUserOrders.slice(0, 3).map((order) => (
-                      <div key={order.id} className="mini-row">
-                        <span>{formatOrderDate(order.createdAt)}</span>
-                        <strong>{formatPrice(order.total)}</strong>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </article>
-            </div>
-          ) : (
-            <button type="button" className="add-btn" onClick={() => openAuthView("login")}>
-              Entrar para acessar a conta
-            </button>
-          )}
-        </section>
-      );
-    }
-
-    if (activeFlow === "orders") {
-      return (
-        <section className="flow-panel orders-panel">
-          <div className="flow-copy">
-            <p className="flow-kicker">Pedidos</p>
-            <h3>Resumo de compras</h3>
-            <p>Veja o histórico dos pedidos realizados nesta navegação.</p>
-          </div>
-
-          {currentUser ? (
-            currentUserOrders.length === 0 ? (
-              <p className="empty-list">Nenhum pedido realizado ainda.</p>
-            ) : (
-              <div className="orders-list">
-                {currentUserOrders.map((order) => (
-                  <article key={order.id} className="order-card">
-                    <div className="order-head">
-                      <strong>{formatOrderDate(order.createdAt)}</strong>
-                      <span>{order.status}</span>
-                    </div>
-                    <p>Rastreio: {order.trackingCode || "Não disponível"}</p>
-                    <p>{order.items.length} item(ns)</p>
-                    <strong>{formatPrice(order.total)}</strong>
-                  </article>
-                ))}
-              </div>
-            )
-          ) : (
-            <button type="button" className="add-btn" onClick={() => openAuthView("login")}>
-              Entre para visualizar seus pedidos
-            </button>
-          )}
-        </section>
-      );
-    }
-
-    if (activeFlow === "wishlist") {
-      return (
-        <section className="flow-panel wishlist-panel">
-          <div className="flow-copy">
-            <p className="flow-kicker">Desejos</p>
-            <h3>Sua lista curada</h3>
-            <p>Salve produtos para rever depois e montar uma compra mais estratégica.</p>
-          </div>
-
-          {wishlistItems.length === 0 ? (
-            <p className="empty-list">Nenhum item salvo ainda. Use o coração nos cards.</p>
-          ) : (
-            <div className="orders-list">
-              {wishlistItems.map((item) => (
-                <article key={item.id} className="order-card wishlist-card">
-                  <div className="order-head">
-                    <strong>{item.name}</strong>
-                    <span>{item.category}</span>
-                  </div>
-                  <p>{item.badge}</p>
-                  <div className="wishlist-actions">
-                    <strong>{formatPrice(item.price)}</strong>
-                    <div className="wishlist-buttons">
-                      <button type="button" className="ghost-btn" onClick={() => addToCart(item)}>
-                        Adicionar ao carrinho
-                      </button>
-                      <button type="button" className="ghost-btn" onClick={() => toggleWishlist(item)}>
-                        Remover
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-      );
-    }
-
-    if (activeFlow === "support") {
-      return (
-        <section className="flow-panel support-panel">
-          <div className="flow-copy">
-            <p className="flow-kicker">Atendimento</p>
-            <h3>Suporte boutique</h3>
-            <p>Canal de atendimento para dúvidas, trocas e orientações de rotina.</p>
-          </div>
-
-          <div className="account-grid">
-            <article className="info-card">
-              <strong>WhatsApp</strong>
-              <p>{configState.frontendFlows.support.whatsapp}</p>
-            </article>
-            <article className="info-card">
-              <strong>E-mail</strong>
-              <p>{configState.frontendFlows.support.email}</p>
-            </article>
-            <article className="info-card">
-              <strong>Horario</strong>
-              <p>{configState.frontendFlows.support.hours}</p>
-            </article>
-            <article className="info-card">
-              <strong>Postagem</strong>
-              <p>{configState.frontendFlows.support.eta}</p>
-            </article>
-          </div>
-        </section>
-      );
-    }
-
-    if (activeFlow === "tracking") {
-      return (
-        <section className="flow-panel support-panel">
-          <div className="flow-copy">
-            <p className="flow-kicker">Rastrear pedido</p>
-            <h3>Acompanhe sua entrega</h3>
-            <p>
-              Digite o codigo de rastreio para consultar o ultimo status do pedido.
-            </p>
-            <div className="flow-benefits">
-              {TRACKING_STATUS_STEPS.map((step) => (
-                <span key={step}>{step}</span>
-              ))}
-            </div>
-          </div>
-
-          <form className="auth-form" onSubmit={handleTrackOrder}>
-            <label className="field-group">
-              <span>Codigo de rastreio</span>
-              <input
-                value={trackingInput}
-                onChange={(event) => setTrackingInput(event.target.value.toUpperCase())}
-                placeholder="Ex: LP12345678"
-              />
-            </label>
-
-            <div className="auth-actions">
-              <button type="submit" className="add-btn">
-                Consultar pedido
-              </button>
-              <button
-                type="button"
-                className="ghost-btn"
-                onClick={() => {
-                  setTrackingInput("");
-                  setTrackingResult(null);
-                }}
-              >
-                Limpar
-              </button>
-            </div>
-
-            {trackingResult?.found && trackingResult.order && (
-              <article className="info-card">
-                <strong>Status: {trackingResult.order.status}</strong>
-                <p>Pedido: {trackingResult.order.id}</p>
-                <p>Rastreio: {trackingResult.order.trackingCode}</p>
-                <p>Data: {formatOrderDate(trackingResult.order.createdAt)}</p>
-                <p>Total: {formatPrice(trackingResult.order.total)}</p>
-              </article>
-            )}
-
-            {trackingResult?.found === false && (
-              <p className="empty-list">{trackingResult.message}</p>
-            )}
-          </form>
-        </section>
-      );
-    }
-
-    return null;
-  };
-
-  function handleCategoryMenuClick(item) {
-    const normalized = item.toLowerCase();
-
-    if (normalized.includes("combos")) {
-      setSelectedShowcase("combos");
-      setActiveFlow("home");
+  async function handleAdminImageUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file) {
       return;
     }
 
-    if (normalized.includes("promoc")) {
-      setSelectedShowcase("promocoes");
-      setActiveFlow("home");
+    try {
+      if (!isAdmin || !currentUser?.sessionToken) {
+        setAdminMessage("Somente o owner autenticado pode enviar imagens.");
+        return;
+      }
+
+      setIsImageUploading(true);
+      setAdminMessage("Enviando imagem para o storage...");
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(buildApiUrl("/api/uploads"), {
+        method: "POST",
+        headers: {
+          "x-session-token": currentUser.sessionToken
+        },
+        body: formData
+      });
+
+      // Check for session expiry
+      if (response.status === 401) {
+        setAdminMessage("Sessao expirada. Faca login novamente para enviar imagens.");
+        handleLogout();
+        return;
+      }
+
+      const payload = await getJson(response);
+      
+      if (!response.ok) {
+        setAdminMessage(payload.error || "Nao foi possivel enviar a imagem.");
+        return;
+      }
+
+      setAdminForm((previous) => ({ ...previous, image: payload.url }));
+      setAdminMessage(payload.message || "Imagem enviada com sucesso.");
+    } catch (error) {
+      setAdminMessage(error.message || "Nao foi possivel enviar a imagem.");
+    } finally {
+      setIsImageUploading(false);
+      event.target.value = "";
+    }
+  }
+
+  async function handleAdminSubmit(event) {
+    event.preventDefault();
+
+    if (!isAdmin || !currentUser?.sessionToken) {
+      setAdminMessage("Somente o owner autenticado pode editar o catalogo.");
       return;
     }
 
-    if (normalized.includes("desejados")) {
-      setSelectedShowcase("mais-desejados");
-      setActiveFlow("home");
+    if (!adminForm.name.trim() || !adminForm.image.trim()) {
+      setAdminMessage("Preencha nome e imagem do produto.");
       return;
     }
 
-    if (normalized.includes("wishlist") || normalized.includes("desejos")) {
-      setActiveFlow("wishlist");
+    try {
+      setIsAdminSaving(true);
+      const response = await fetch(buildApiUrl("/api/products"), {
+        method: adminForm.id ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-token": currentUser.sessionToken
+        },
+        body: JSON.stringify({
+          ...adminForm,
+          price: Number(adminForm.price),
+          oldPrice: Number(adminForm.oldPrice || adminForm.price)
+        })
+      });
+
+      // Check for session expiry
+      if (response.status === 401) {
+        setAdminMessage("Sessao expirada. Faca login novamente para editar o catalogo.");
+        handleLogout();
+        return;
+      }
+
+      const payload = await getJson(response);
+      
+      if (!response.ok) {
+        setAdminMessage(payload.error || payload.message || "Nao foi possivel salvar o produto.");
+        return;
+      }
+
+      setAdminMessage(payload.message || "Catalogo atualizado.");
+      resetAdminForm();
+      await loadCatalog();
+    } catch (error) {
+      setAdminMessage(error.message || "Nao foi possivel salvar o produto.");
+    } finally {
+      setIsAdminSaving(false);
+    }
+  }
+
+  async function handleDeleteProduct(productId) {
+    if (!isAdmin || !currentUser?.sessionToken) {
+      setAdminMessage("Somente o owner autenticado pode remover produtos.");
       return;
     }
 
-    const match = categories.find(
-      (category) => category.toLowerCase() === normalized
-    );
+    try {
+      setIsAdminSaving(true);
+      const response = await fetch(buildApiUrl(`/api/products?id=${encodeURIComponent(productId)}`), {
+        method: "DELETE",
+        headers: {
+          "x-session-token": currentUser.sessionToken
+        }
+      });
 
-    if (match) {
-      setSelectedCategory(match);
-      setActiveFlow("home");
-      return;
+      // Check for session expiry
+      if (response.status === 401) {
+        setAdminMessage("Sessao expirada. Faca login novamente para remover produtos.");
+        handleLogout();
+        return;
+      }
+
+      const payload = await getJson(response);
+      
+      if (!response.ok) {
+        setAdminMessage(payload.error || payload.message || "Nao foi possivel remover o produto.");
+        return;
+      }
+
+      setAdminMessage(payload.message || "Produto removido da vitrine.");
+      if (adminForm.id === productId) {
+        resetAdminForm();
+      }
+      await loadCatalog();
+    } catch (error) {
+      setAdminMessage(error.message || "Nao foi possivel remover o produto.");
+    } finally {
+      setIsAdminSaving(false);
     }
+  }
 
-    setSelectedCategory("Todos");
-    setActiveFlow("home");
+  function renderFlowPanel() {
+    switch (activeFlow) {
+      case "auth":
+        return (
+          <AuthPanel
+            authView={authView}
+            authForm={authForm}
+            authMessage={authMessage}
+            showPassword={showPassword}
+            rememberLogin={rememberLogin}
+            isAuthLoading={isAuthLoading}
+            onOpenAuthView={openAuthView}
+            onSetShowPassword={setShowPassword}
+            onSetRememberLogin={setRememberLogin}
+            onSetAuthForm={setAuthField}
+            onClear={() => {
+              setAuthForm(AUTH_DEFAULT_FORM);
+              setAuthMessage("");
+            }}
+            onSubmit={handleAuthSubmit}
+          />
+        );
+      case "account":
+        return (
+          <AccountPanel
+            currentUser={currentUser}
+            isAdmin={isAdmin}
+            currentUserOrders={currentUserOrders}
+            onOpenAdmin={() => setActiveFlow("admin")}
+            onOpenLogin={() => openAuthView("login")}
+            onLogout={handleLogout}
+          />
+        );
+      case "orders":
+        return (
+          <OrdersPanel
+            currentUser={currentUser}
+            currentUserOrders={currentUserOrders}
+            onOpenLogin={() => openAuthView("login")}
+          />
+        );
+      case "wishlist":
+        return (
+          <WishlistPanel
+            wishlistItems={wishlistItems}
+            onAddToCart={addToCart}
+            onToggleWishlist={toggleWishlist}
+          />
+        );
+      case "support":
+        return <SupportPanel />;
+      case "tracking":
+        return (
+          <TrackingPanel
+            trackingInput={trackingInput}
+            trackingResult={trackingResult}
+            onSetTrackingInput={setTrackingInput}
+            onSubmit={handleTrackOrder}
+            onClear={() => {
+              setTrackingInput("");
+              setTrackingResult(null);
+            }}
+          />
+        );
+      case "admin":
+        return (
+          <AdminPanel
+            isAdmin={isAdmin}
+            catalogSource={catalogSource}
+            adminForm={adminForm}
+            adminMessage={adminMessage}
+            isAdminSaving={isAdminSaving}
+            isImageUploading={isImageUploading}
+            allProducts={allProducts}
+            onSetAdminForm={setAdminField}
+            onUploadImage={handleAdminImageUpload}
+            onSubmit={handleAdminSubmit}
+            onReset={resetAdminForm}
+            onEdit={fillAdminForm}
+            onDelete={handleDeleteProduct}
+          />
+        );
+      default:
+        return <HomeCallout />;
+    }
   }
 
   return (
@@ -1114,12 +888,10 @@ function App() {
       <header className="header-shell">
         <div className="header-top">
           <p>
-            {currentUser
-              ? `Olá, ${currentUser.name}`
-              : "Olá, visitante"} | Entrar ou cadastrar
+            {currentUser ? `Ola, ${currentUser.name}` : "Ola, visitante"} | {isAdmin ? "owner online" : "beauty commerce"}
           </p>
           <div className="top-links">
-            {configState.frontendFlows.accountLinks.map((link) => (
+            {accountLinks.map((link) => (
               <button key={link.key} onClick={() => handleFlowAction(link.key)}>
                 {link.label}
               </button>
@@ -1129,13 +901,13 @@ function App() {
 
         <div className="header-main">
           <div className="brand">
-            <span className="brand-kicker">perfumaria ltda</span>
-            <h1>Adrian Beauty Store</h1>
+            <span className="brand-kicker">beauty + home care</span>
+            <h1>Adrian Future Store</h1>
           </div>
 
           <label className="search-wrap">
             <input
-              placeholder="O que voce esta buscando hoje?"
+              placeholder="Busque skincare, maquiagem, perfumaria e limpeza premium"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -1149,16 +921,16 @@ function App() {
         </div>
 
         <div className="shipping-strip" aria-label="Informacoes da loja">
-          <span>Entregamos para todo o Brasil</span>
-          <span>Perfumes originais e importados</span>
-          <span>Parcelamento em ate 6x sem juros</span>
+          <span>Beauty commerce com linguagem premium</span>
+          <span>Cosmeticos e home care em uma unica curadoria</span>
+          <span>Painel owner conectado ao banco</span>
         </div>
       </header>
 
       <main className="content-grid">
         <aside className="category-sidebar" aria-label="Categorias da loja">
           <strong>Categorias</strong>
-          {configState.frontendFlows.categoryMenu.map((item) => (
+          {frontendFlows.categoryMenu.map((item) => (
             <button key={item} type="button" onClick={() => handleCategoryMenuClick(item)}>
               {item}
             </button>
@@ -1166,34 +938,12 @@ function App() {
         </aside>
 
         <section className="main-column">
-          <section
-            className="hero"
-            style={{ backgroundImage: `url(${currentBanner.image})` }}
-          >
-            <div className="hero-overlay">
-              <p className="hero-kicker">
-                CONFIGURACAO DE IMAGEM: {configState.imageConfig.mode}
-              </p>
-              <h2>{currentBanner.title}</h2>
-              <p>{currentBanner.subtitle}</p>
-              <div className="hero-buttons">
-                {configState.imageConfig.heroBanners.map((banner) => (
-                  <button
-                    key={banner.id}
-                    className={activeBanner === banner.id ? "active-hero" : ""}
-                    onClick={() => setActiveBanner(banner.id)}
-                  >
-                    Banner {banner.id.replace("hero-", "")}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </section>
+          <HeroSection imageConfig={imageConfig} activeBanner={activeBanner} onSelectBanner={setActiveBanner} />
 
-          <p className="image-note">{configState.imageConfig.note}</p>
+          <p className="image-note">{imageConfig.note}</p>
 
           <section className="trust-strip" aria-label="Beneficios da loja">
-            {configState.frontendFlows.trustBadges.map((badge) => (
+            {frontendFlows.trustBadges.map((badge) => (
               <article key={badge.key} className="trust-card">
                 <strong>{badge.title}</strong>
                 <p>{badge.subtitle}</p>
@@ -1202,7 +952,7 @@ function App() {
           </section>
 
           <section className="showcase-tabs" aria-label="Buscas em alta">
-            {configState.frontendFlows.hotSearches.map((term) => (
+            {frontendFlows.hotSearches.map((term) => (
               <button key={term} className="chip" onClick={() => setSearch(term)}>
                 {term}
               </button>
@@ -1211,151 +961,45 @@ function App() {
 
           {renderFlowPanel()}
 
-          <section className="beauty-highlights" aria-label="Destaques ilustrativos">
-            {beautyHighlights.map((item) => (
-              <article key={item.id} className="highlight-card">
-                <img src={item.image} alt={item.title} onError={withImageFallback} />
-                <div className="highlight-overlay">
-                  <strong>{item.title}</strong>
-                  <p>{item.subtitle}</p>
-                </div>
-              </article>
-            ))}
-          </section>
+          <HighlightsSection />
 
-          <section className="showcase-tabs">
-            {configState.frontendFlows.showcaseTabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setSelectedShowcase(tab.key)}
-                className={selectedShowcase === tab.key ? "chip active" : "chip"}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </section>
+          <ProductCatalogSection
+            frontendFlows={frontendFlows}
+            categories={categories}
+            selectedShowcase={selectedShowcase}
+            selectedCategory={selectedCategory}
+            catalogNotice={catalogNotice}
+            isCatalogLoading={isCatalogLoading}
+            visibleProducts={visibleProducts}
+            wishlistItems={wishlistItems}
+            isAdmin={isAdmin}
+            onSelectShowcase={setSelectedShowcase}
+            onSelectCategory={setSelectedCategory}
+            onAddToCart={addToCart}
+            onToggleWishlist={toggleWishlist}
+            onEditProduct={fillAdminForm}
+          />
 
-          <section className="category-strip">
-            {["Todos", ...categories].map((category) => (
-              <button
-                key={category}
-                className={selectedCategory === category ? "chip active" : "chip"}
-                onClick={() => setSelectedCategory(category)}
-              >
-                {category}
-              </button>
-            ))}
-          </section>
-
-          {catalogNotice && <p className="image-note">{catalogNotice}</p>}
-
-          <div className="section-head">
-            <h3>Lancamentos</h3>
-            <p>Vitrine com os destaques mais procurados do momento.</p>
-          </div>
-
-          <section className="product-grid">
-            {isCatalogLoading && (
-              <p className="empty-list">Carregando catalogo...</p>
-            )}
-            {!isCatalogLoading &&
-              visibleProducts.map((product) => (
-                <article key={product.id} className="product-card">
-                  <div className="image-wrapper">
-                    <img src={product.image} alt={product.name} onError={withImageFallback} />
-                    <span className="badge">{product.badge}</span>
-                  </div>
-                  <div className="product-body">
-                    <small>{product.category}</small>
-                    <h3>{product.name}</h3>
-                    <p className="price-line">
-                      <span className="price">{formatPrice(product.price)}</span>
-                      <span className="old-price">{formatPrice(product.oldPrice)}</span>
-                    </p>
-                    <div className="product-actions">
-                      <button className="add-btn" onClick={() => addToCart(product)}>
-                        Adicionar
-                      </button>
-                      <button
-                        type="button"
-                        className="ghost-btn product-wishlist"
-                        onClick={() => toggleWishlist(product)}
-                      >
-                        {wishlistItems.some((item) => item.id === product.id)
-                          ? "Salvo"
-                          : "Salvar"}
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            {!isCatalogLoading && visibleProducts.length === 0 && (
-              <p className="empty-list">Nenhum item para os filtros atuais.</p>
-            )}
-          </section>
-
-          <div className="section-head">
-            <h3>Escolha pelo estilo</h3>
-            <p>Colecoes para cada assinatura olfativa.</p>
-          </div>
-
-          <section className="beauty-gallery" aria-label="Galeria ilustrativa">
-            {beautyGallery.map((item) => (
-              <article key={item.id} className="gallery-card">
-                <img src={item.image} alt={item.label} onError={withImageFallback} />
-                <p>{item.label}</p>
-              </article>
-            ))}
-          </section>
+          <GallerySection />
         </section>
       </main>
 
       <footer className="footer">
         <div>
-          <strong>Adrian Beauty Store</strong>
-          <p>Curadoria de fragrancias premium com atendimento boutique.</p>
+          <strong>Adrian Future Store</strong>
+          <p>Curadoria de cosmeticos, perfumaria e produtos de limpeza com linguagem premium.</p>
         </div>
         <p>Atendimento: seg a sab, 9h as 20h | WhatsApp (11) 99999-9999</p>
       </footer>
 
-      <aside className={isCartOpen ? "cart-drawer open" : "cart-drawer"}>
-        <div className="cart-header">
-          <h3>Seu carrinho</h3>
-          <button onClick={() => setIsCartOpen(false)}>Fechar</button>
-        </div>
-
-        {cartItems.length === 0 ? (
-          <p className="empty">Seu carrinho esta vazio.</p>
-        ) : (
-          <div className="cart-list">
-            {cartItems.map((item) => (
-              <div key={item.id} className="cart-item">
-                <img src={item.image} alt={item.name} onError={withImageFallback} />
-                <div>
-                  <p>{item.name}</p>
-                  <small>{formatPrice(item.price)}</small>
-                  <div className="qty-control">
-                    <button onClick={() => updateQuantity(item.id, -1)}>-</button>
-                    <span>{item.qty}</span>
-                    <button onClick={() => updateQuantity(item.id, 1)}>+</button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="cart-footer">
-          <p>
-            Subtotal: <strong>{formatPrice(subtotal)}</strong>
-          </p>
-          <button className="checkout" onClick={handleCheckout}>
-            Finalizar compra
-          </button>
-        </div>
-      </aside>
-
-      {isCartOpen && <div className="overlay" onClick={() => setIsCartOpen(false)} />}
+      <CartDrawer
+        isOpen={isCartOpen}
+        cartItems={cartItems}
+        subtotal={subtotal}
+        onClose={() => setIsCartOpen(false)}
+        onUpdateQuantity={updateQuantity}
+        onCheckout={handleCheckout}
+      />
     </div>
   );
 }
