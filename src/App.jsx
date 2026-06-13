@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { frontendFlows, imageConfig } from "./config/storeConfig";
 import { products as fallbackProducts } from "./data/products";
 import {
@@ -103,6 +103,10 @@ function App() {
   const [isImageUploading, setIsImageUploading] = useState(false);
   const [profileMessage, setProfileMessage] = useState("");
   const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const [uiToast, setUiToast] = useState(null);
+  const [isGreetingHighlighted, setIsGreetingHighlighted] = useState(false);
+  const toastTimerRef = useRef(null);
+  const greetingTimerRef = useRef(null);
 
   const isAdmin = currentUser?.role === "admin";
 
@@ -182,6 +186,18 @@ function App() {
   }, [wishlistItems]);
 
   useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+
+      if (greetingTimerRef.current) {
+        clearTimeout(greetingTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (rememberedEmail) {
       window.localStorage.setItem(AUTH_REMEMBERED_EMAIL_KEY, rememberedEmail);
       return;
@@ -219,6 +235,19 @@ function App() {
 
   function setAdminField(field, value) {
     setAdminForm((previous) => ({ ...previous, [field]: value }));
+  }
+
+  function showToast(message, tone = "success") {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+
+    setUiToast({ message, tone });
+
+    toastTimerRef.current = setTimeout(() => {
+      setUiToast(null);
+      toastTimerRef.current = null;
+    }, 3200);
   }
 
   function addToCart(product) {
@@ -534,6 +563,7 @@ function App() {
       setActiveFlow("home");
       setAuthMessage("Voce saiu da conta. Sessao encerrada com sucesso.");
       setProfileMessage("");
+      showToast("Sessao encerrada com sucesso.", "info");
     } catch (error) {
       console.error("Logout error:", error);
       // Still clear local state even if there's an error
@@ -543,6 +573,7 @@ function App() {
       setActiveFlow("home");
       setAuthMessage("Sessao encerrada.");
       setProfileMessage("");
+      showToast("Sessao encerrada.", "info");
     }
   }
 
@@ -592,6 +623,16 @@ function App() {
       }));
 
       setProfileMessage(payload.message || "Informacoes atualizadas com sucesso.");
+      showToast(payload.message || "Informacoes pessoais atualizadas com sucesso.", "success");
+
+      setIsGreetingHighlighted(true);
+      if (greetingTimerRef.current) {
+        clearTimeout(greetingTimerRef.current);
+      }
+      greetingTimerRef.current = setTimeout(() => {
+        setIsGreetingHighlighted(false);
+        greetingTimerRef.current = null;
+      }, 2000);
       return true;
     } catch (error) {
       setProfileMessage(error.message || "Nao foi possivel atualizar seus dados.");
@@ -629,6 +670,7 @@ function App() {
     setIsCartOpen(false);
     setActiveFlow("orders");
     setAuthMessage("Compra finalizada com sucesso.");
+    showToast("Pedido finalizado com sucesso.", "success");
   }
 
   function handleTrackOrder(event) {
@@ -950,7 +992,7 @@ function App() {
     <div className="store-app">
       <header className="header-shell">
         <div className="header-top">
-          <p>
+          <p className={isGreetingHighlighted ? "header-greeting is-updated" : "header-greeting"}>
             {currentUser ? `Ola, ${currentUser.name}` : "Ola, visitante"} | {isAdmin ? "owner online" : "beauty commerce"}
           </p>
           <div className="top-links">
@@ -1063,6 +1105,15 @@ function App() {
         onUpdateQuantity={updateQuantity}
         onCheckout={handleCheckout}
       />
+
+      {uiToast && (
+        <div className="toast-stack" aria-live="polite">
+          <div className={`toast-card toast-${uiToast.tone}`}>
+            <div className="toast-dot" />
+            <p>{uiToast.message}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
