@@ -97,6 +97,25 @@ export function sanitizeUser(user) {
   };
 }
 
+export function getConfiguredAdminIdentity() {
+  return {
+    email: normalizeIdentifier(process.env.ADMIN_EMAIL || "admin@adrianbeauty.com"),
+    cpf: normalizeCpf(process.env.ADMIN_CPF || "11111111111")
+  };
+}
+
+export function isConfiguredAdminUser(user) {
+  if (!user) {
+    return false;
+  }
+
+  const adminIdentity = getConfiguredAdminIdentity();
+  const userEmail = normalizeIdentifier(user.email);
+  const userCpf = normalizeCpf(user.cpf);
+
+  return user.role === "admin" && userEmail === adminIdentity.email && userCpf === adminIdentity.cpf;
+}
+
 export async function ensureAdminUser() {
   if (!isMongoConfigured()) {
     return null;
@@ -161,7 +180,7 @@ export async function requireAdmin(req) {
   const token = String(req.headers["x-session-token"] || "").trim();
   const user = await findUserBySession(token);
 
-  if (!user || user.role !== "admin") {
+  if (!isConfiguredAdminUser(user)) {
     return null;
   }
 

@@ -3,9 +3,11 @@ import {
   createSessionToken,
   ensureAdminUser,
   getDb,
+  getConfiguredAdminIdentity,
   getUsersCollectionName,
   getSessionTokenExpiry,
   invalidateUserSession,
+  isConfiguredAdminUser,
   isMongoConfigured,
   normalizeCpf,
   normalizeIdentifier,
@@ -45,9 +47,14 @@ export default async function handler(req, res) {
     const email = normalizeIdentifier(req.body?.email);
     const cpf = normalizeCpf(req.body?.cpf);
     const password = String(req.body?.password || "").trim();
+    const adminIdentity = getConfiguredAdminIdentity();
 
     if (!name || !email.includes("@") || cpf.length !== 11 || password.length < 8) {
       return res.status(400).json({ error: "Dados invalidos para cadastro." });
+    }
+
+    if (email === adminIdentity.email || cpf === adminIdentity.cpf) {
+      return res.status(403).json({ error: "Cadastro nao permitido para identidade administrativa." });
     }
 
     const duplicate = await users.findOne({
@@ -120,11 +127,17 @@ export default async function handler(req, res) {
       }
     );
 
+    const canUseAdminRole = isConfiguredAdminUser(user);
+    const safeUser = {
+      ...user,
+      role: canUseAdminRole ? "admin" : "customer"
+    };
+
     return res.status(200).json({
       source: "mongodb",
-      user: sanitizeUser({ ...user, sessionToken }),
+      user: sanitizeUser({ ...safeUser, sessionToken }),
       sessionToken,
-      message: user.role === "admin"
+      message: canUseAdminRole
         ? "Painel administrativo liberado."
         : "Login realizado com sucesso."
     });
