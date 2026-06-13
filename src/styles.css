@@ -788,6 +788,12 @@ select {
   gap: 10px;
 }
 
+.account-edit-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
 .mini-row,
 .order-head,
 .wishlist-actions,

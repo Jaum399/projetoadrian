@@ -201,6 +201,59 @@ export default async function handler(req, res) {
     });
   }
 
+  if (action === "update-profile") {
+    const sessionToken = String(req.headers["x-session-token"] || "").trim();
+
+    if (!sessionToken) {
+      return res.status(401).json({ error: "Sessao invalida ou expirada." });
+    }
+
+    const user = await users.findOne({ sessionToken });
+
+    if (!user) {
+      return res.status(401).json({ error: "Sessao invalida ou expirada." });
+    }
+
+    const nextName = String(req.body?.name || "").trim();
+    const nextCpf = normalizeCpf(req.body?.cpf);
+
+    if (!nextName || nextCpf.length !== 11) {
+      return res.status(400).json({ error: "Informe nome e CPF validos para atualizar o perfil." });
+    }
+
+    if (user.role === "admin" && nextCpf !== normalizeCpf(user.cpf)) {
+      return res.status(403).json({ error: "CPF do owner nao pode ser alterado." });
+    }
+
+    const duplicateCpf = await users.findOne({
+      cpf: nextCpf,
+      _id: { $ne: user._id }
+    });
+
+    if (duplicateCpf) {
+      return res.status(409).json({ error: "CPF ja cadastrado por outro usuario." });
+    }
+
+    await users.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          name: nextName,
+          cpf: nextCpf,
+          updatedAt: new Date().toISOString()
+        }
+      }
+    );
+
+    const updatedUser = await users.findOne({ _id: user._id });
+
+    return res.status(200).json({
+      source: "mongodb",
+      user: sanitizeUser(updatedUser),
+      message: "Informacoes pessoais atualizadas com sucesso."
+    });
+  }
+
     return res.status(400).json({ error: "Acao nao suportada." });
   } catch (error) {
     return res.status(500).json({ error: "Falha na operacao." });

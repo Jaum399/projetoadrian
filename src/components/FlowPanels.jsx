@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { frontendFlows } from "../config/storeConfig";
 import {
   TRACKING_STATUS_STEPS,
@@ -179,7 +180,46 @@ export function AuthPanel({
   );
 }
 
-export function AccountPanel({ currentUser, isAdmin, currentUserOrders, onOpenAdmin, onOpenLogin, onLogout }) {
+export function AccountPanel({
+  currentUser,
+  isAdmin,
+  currentUserOrders,
+  profileMessage,
+  isProfileSaving,
+  onOpenAdmin,
+  onOpenLogin,
+  onUpdateProfile,
+  onClearProfileMessage,
+  onLogout
+}) {
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: "", cpf: "" });
+
+  useEffect(() => {
+    if (!currentUser) {
+      setIsEditingProfile(false);
+      setProfileForm({ name: "", cpf: "" });
+      return;
+    }
+
+    setProfileForm({
+      name: currentUser.name || "",
+      cpf: formatCpfInput(currentUser.cpf || "")
+    });
+  }, [currentUser]);
+
+  async function handleProfileSubmit(event) {
+    event.preventDefault();
+    const saved = await onUpdateProfile({
+      name: profileForm.name,
+      cpf: profileForm.cpf
+    });
+
+    if (saved) {
+      setIsEditingProfile(false);
+    }
+  }
+
   return (
     <section className="flow-panel futuristic-panel">
       <div className="flow-copy">
@@ -196,6 +236,75 @@ export function AccountPanel({ currentUser, isAdmin, currentUserOrders, onOpenAd
             <p>{currentUser.cpf ? formatCpfInput(currentUser.cpf) : "CPF nao informado"}</p>
             <p>{currentUser.email}</p>
             <p>Perfil: {isAdmin ? "Owner" : "Cliente"}</p>
+
+            {isEditingProfile ? (
+              <form className="account-edit-form" onSubmit={handleProfileSubmit}>
+                <label className="field-group">
+                  <span>Nome completo</span>
+                  <input
+                    value={profileForm.name}
+                    onChange={(event) =>
+                      setProfileForm((previous) => ({
+                        ...previous,
+                        name: event.target.value
+                      }))
+                    }
+                    placeholder="Seu nome"
+                    required
+                  />
+                </label>
+
+                <label className="field-group">
+                  <span>CPF</span>
+                  <input
+                    inputMode="numeric"
+                    value={profileForm.cpf}
+                    onChange={(event) =>
+                      setProfileForm((previous) => ({
+                        ...previous,
+                        cpf: formatCpfInput(event.target.value)
+                      }))
+                    }
+                    placeholder="000.000.000-00"
+                    required
+                  />
+                </label>
+
+                <div className="inline-actions">
+                  <button type="submit" className="add-btn" disabled={isProfileSaving}>
+                    {isProfileSaving ? "Salvando..." : "Salvar dados"}
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    onClick={() => {
+                      setIsEditingProfile(false);
+                      setProfileForm({
+                        name: currentUser.name || "",
+                        cpf: formatCpfInput(currentUser.cpf || "")
+                      });
+                      onClearProfileMessage();
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => {
+                  setIsEditingProfile(true);
+                  onClearProfileMessage();
+                }}
+              >
+                Alterar informacoes pessoais
+              </button>
+            )}
+
+            {profileMessage && <p className="flow-message">{profileMessage}</p>}
+
             <div className="inline-actions">
               {isAdmin && (
                 <button type="button" className="add-btn" onClick={onOpenAdmin}>

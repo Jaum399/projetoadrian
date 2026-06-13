@@ -101,6 +101,8 @@ function App() {
   const [adminMessage, setAdminMessage] = useState("");
   const [isAdminSaving, setIsAdminSaving] = useState(false);
   const [isImageUploading, setIsImageUploading] = useState(false);
+  const [profileMessage, setProfileMessage] = useState("");
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
 
   const isAdmin = currentUser?.role === "admin";
 
@@ -531,6 +533,7 @@ function App() {
       setCurrentUser(null);
       setActiveFlow("home");
       setAuthMessage("Voce saiu da conta. Sessao encerrada com sucesso.");
+      setProfileMessage("");
     } catch (error) {
       console.error("Logout error:", error);
       // Still clear local state even if there's an error
@@ -539,6 +542,60 @@ function App() {
       setCurrentUser(null);
       setActiveFlow("home");
       setAuthMessage("Sessao encerrada.");
+      setProfileMessage("");
+    }
+  }
+
+  async function handleUpdateProfile(nextProfile) {
+    if (!currentUser?.sessionToken) {
+      setProfileMessage("Sua sessao expirou. Faca login novamente.");
+      openAuthView("login");
+      return false;
+    }
+
+    try {
+      setIsProfileSaving(true);
+      setProfileMessage("Salvando suas informacoes...");
+
+      const response = await fetch(buildApiUrl("/api/auth"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-token": currentUser.sessionToken
+        },
+        body: JSON.stringify({
+          action: "update-profile",
+          name: nextProfile.name,
+          cpf: nextProfile.cpf
+        })
+      });
+
+      if (response.status === 401) {
+        setProfileMessage("Sessao expirada. Faca login novamente.");
+        await handleLogout();
+        return false;
+      }
+
+      const payload = await getJson(response);
+
+      if (!response.ok) {
+        setProfileMessage(payload.error || "Nao foi possivel atualizar seus dados.");
+        return false;
+      }
+
+      setCurrentUser((previous) => ({
+        ...previous,
+        ...payload.user,
+        sessionToken: previous?.sessionToken || ""
+      }));
+
+      setProfileMessage(payload.message || "Informacoes atualizadas com sucesso.");
+      return true;
+    } catch (error) {
+      setProfileMessage(error.message || "Nao foi possivel atualizar seus dados.");
+      return false;
+    } finally {
+      setIsProfileSaving(false);
     }
   }
 
@@ -824,8 +881,12 @@ function App() {
             currentUser={currentUser}
             isAdmin={isAdmin}
             currentUserOrders={currentUserOrders}
+            profileMessage={profileMessage}
+            isProfileSaving={isProfileSaving}
             onOpenAdmin={() => setActiveFlow("admin")}
             onOpenLogin={() => openAuthView("login")}
+            onUpdateProfile={handleUpdateProfile}
+            onClearProfileMessage={() => setProfileMessage("")}
             onLogout={handleLogout}
           />
         );
