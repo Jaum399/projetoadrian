@@ -25,6 +25,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Metodo nao permitido" });
   }
 
+  const action = String(req.body?.action || "").trim();
+
   if (!isMongoConfigured()) {
     return sendFallback(
       res,
@@ -32,11 +34,11 @@ export default async function handler(req, res) {
     );
   }
 
-  await ensureAdminUser();
+  try {
+    await ensureAdminUser();
 
-  const action = String(req.body?.action || "").trim();
-  const db = await getDb();
-  const users = db.collection(getUsersCollectionName());
+    const db = await getDb();
+    const users = db.collection(getUsersCollectionName());
 
   if (action === "register") {
     const name = String(req.body?.name || "").trim();
@@ -186,5 +188,40 @@ export default async function handler(req, res) {
     });
   }
 
-  return res.status(400).json({ error: "Acao nao suportada." });
+    return res.status(400).json({ error: "Acao nao suportada." });
+  } catch (error) {
+    if (action === "login") {
+      const identifier = normalizeIdentifier(req.body?.identifier || req.body?.email);
+      const password = String(req.body?.password || "").trim();
+      const identifierCpf = normalizeCpf(identifier);
+
+      const adminEmail = normalizeIdentifier(process.env.ADMIN_EMAIL || "admin@adrianbeauty.com");
+      const adminPassword = String(process.env.ADMIN_PASSWORD || "Admin123!");
+      const adminName = String(process.env.ADMIN_NAME || "Administrador Adrian Beauty");
+      const adminCpf = normalizeCpf(process.env.ADMIN_CPF || "11111111111");
+
+      const matchesEmail = identifier.includes("@") && identifier === adminEmail;
+      const matchesCpf = identifierCpf.length === 11 && identifierCpf === adminCpf;
+
+      if ((matchesEmail || matchesCpf) && password === adminPassword) {
+        const sessionToken = createSessionToken();
+        return res.status(200).json({
+          source: "runtime-fallback",
+          user: sanitizeUser({
+            id: "fallback-admin",
+            name: adminName,
+            email: adminEmail,
+            cpf: adminCpf,
+            role: "admin"
+          }),
+          sessionToken,
+          message: "Painel administrativo liberado. Banco em contingencia."
+        });
+      }
+
+      return res.status(401).json({ error: "Credenciais invalidas." });
+    }
+
+    return res.status(500).json({ error: "Falha na operacao." });
+  }
 }
