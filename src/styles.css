@@ -1,21 +1,21 @@
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap");
 
 :root {
-  --bg: #04111f;
-  --bg-soft: #071a2e;
-  --surface: rgba(8, 25, 43, 0.82);
-  --surface-strong: rgba(10, 31, 53, 0.94);
-  --surface-light: rgba(16, 42, 69, 0.92);
-  --line: rgba(139, 229, 194, 0.16);
-  --line-strong: rgba(139, 229, 194, 0.32);
-  --ink: #f4fbff;
-  --muted: #93aac0;
-  --brand: #8be5c2;
-  --brand-strong: #5bc7a1;
-  --gold: #f4c57f;
+  --bg: #f8f3eb;
+  --bg-soft: #f2e8dc;
+  --surface: rgba(255, 252, 247, 0.9);
+  --surface-strong: rgba(255, 250, 244, 0.96);
+  --surface-light: rgba(250, 243, 234, 0.94);
+  --line: rgba(182, 146, 101, 0.2);
+  --line-strong: rgba(182, 146, 101, 0.36);
+  --ink: #3f2f22;
+  --muted: #7b6754;
+  --brand: #c19a6b;
+  --brand-strong: #a87c45;
+  --gold: #d4ad78;
   --danger: #ff8f8f;
-  --shadow-soft: 0 16px 40px rgba(0, 0, 0, 0.28);
-  --shadow-card: 0 24px 60px rgba(0, 0, 0, 0.34);
+  --shadow-soft: 0 12px 30px rgba(109, 81, 46, 0.14);
+  --shadow-card: 0 20px 48px rgba(109, 81, 46, 0.16);
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
@@ -32,9 +32,9 @@ body {
   font-family: "Manrope", "Segoe UI", sans-serif;
   color: var(--ink);
   background:
-    radial-gradient(circle at top left, rgba(91, 199, 161, 0.18), transparent 30%),
-    radial-gradient(circle at right 10%, rgba(244, 197, 127, 0.14), transparent 24%),
-    linear-gradient(180deg, #03101d 0%, #061624 40%, #03111f 100%);
+    radial-gradient(circle at top left, rgba(193, 154, 107, 0.16), transparent 30%),
+    radial-gradient(circle at right 10%, rgba(255, 255, 255, 0.85), transparent 30%),
+    linear-gradient(180deg, #fffdfa 0%, #f6eee4 45%, #f0e5d8 100%);
   overflow-x: hidden;
 }
 
@@ -44,8 +44,8 @@ body::before {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(139, 229, 194, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(139, 229, 194, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(193, 154, 107, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(193, 154, 107, 0.06) 1px, transparent 1px);
   background-size: 64px 64px;
   mask-image: radial-gradient(circle at center, black 40%, transparent 92%);
 }
@@ -116,7 +116,7 @@ select {
   border: 1px solid var(--line);
   border-radius: 24px;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(8, 25, 43, 0.92), rgba(8, 25, 43, 0.74));
+  background: linear-gradient(180deg, rgba(255, 251, 246, 0.96), rgba(245, 234, 220, 0.92));
   box-shadow: var(--shadow-soft);
 }
 
@@ -126,8 +126,8 @@ select {
   align-items: center;
   gap: 12px;
   padding: 12px 18px;
-  background: rgba(139, 229, 194, 0.06);
-  border-bottom: 1px solid rgba(139, 229, 194, 0.08);
+  background: rgba(193, 154, 107, 0.08);
+  border-bottom: 1px solid rgba(193, 154, 107, 0.15);
 }
 
 .header-top p,
@@ -176,7 +176,7 @@ select {
 .hero-buttons button:hover,
 .category-sidebar button:hover {
   border-color: var(--line-strong);
-  background: rgba(139, 229, 194, 0.08);
+  background: rgba(193, 154, 107, 0.12);
   transform: translateY(-1px);
 }
 
@@ -215,16 +215,16 @@ select {
 .field-group input,
 .field-group select {
   width: 100%;
-  border: 1px solid rgba(139, 229, 194, 0.18);
+  border: 1px solid rgba(182, 146, 101, 0.24);
   border-radius: 16px;
   padding: 13px 15px;
-  background: rgba(2, 10, 18, 0.46);
+  background: rgba(255, 255, 255, 0.88);
   color: var(--ink);
 }
 
 .search-wrap input::placeholder,
 .field-group input::placeholder {
-  color: #7f99af;
+  color: #9a846d;
 }
 
 .search-wrap input:focus-visible,
@@ -232,7 +232,7 @@ select {
 .field-group select:focus-visible {
   outline: none;
   border-color: var(--brand);
-  box-shadow: 0 0 0 4px rgba(139, 229, 194, 0.12);
+  box-shadow: 0 0 0 4px rgba(182, 146, 101, 0.16);
 }
 
 .header-actions {
@@ -243,19 +243,19 @@ select {
 .add-btn,
 .checkout {
   border: 1px solid transparent;
-  background: linear-gradient(135deg, var(--brand), #98ffd6);
-  color: #042139;
+  background: linear-gradient(135deg, var(--brand), #e7c9a3);
+  color: #3f2f22;
   border-radius: 16px;
   padding: 12px 16px;
   font-weight: 800;
-  box-shadow: 0 10px 24px rgba(91, 199, 161, 0.22);
+  box-shadow: 0 10px 24px rgba(182, 146, 101, 0.24);
 }
 
 .cart-button:hover,
 .add-btn:hover,
 .checkout:hover {
   transform: translateY(-1px);
-  box-shadow: 0 16px 28px rgba(91, 199, 161, 0.28);
+  box-shadow: 0 16px 28px rgba(182, 146, 101, 0.28);
 }
 
 .add-btn:disabled,
@@ -268,7 +268,7 @@ select {
 }
 
 .shipping-strip {
-  border-top: 1px solid rgba(139, 229, 194, 0.1);
+  border-top: 1px solid rgba(182, 146, 101, 0.18);
   padding: 11px 18px;
   display: flex;
   gap: 16px;
@@ -288,7 +288,7 @@ select {
   top: 14px;
   border: 1px solid var(--line);
   border-radius: 24px;
-  background: rgba(8, 25, 43, 0.72);
+  background: rgba(255, 251, 246, 0.9);
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -331,7 +331,7 @@ select {
   flex-direction: column;
   justify-content: flex-end;
   gap: 10px;
-  background: linear-gradient(110deg, rgba(3, 11, 20, 0.88) 12%, rgba(3, 11, 20, 0.56) 52%, rgba(3, 11, 20, 0.18) 100%);
+  background: linear-gradient(110deg, rgba(63, 47, 34, 0.66) 12%, rgba(99, 73, 46, 0.4) 52%, rgba(120, 93, 62, 0.18) 100%);
 }
 
 .hero-kicker,
@@ -386,8 +386,8 @@ select {
 
 .hero-buttons .active-hero,
 .chip.active {
-  background: linear-gradient(135deg, rgba(139, 229, 194, 0.18), rgba(244, 197, 127, 0.18));
-  border-color: rgba(244, 197, 127, 0.55);
+  background: linear-gradient(135deg, rgba(193, 154, 107, 0.18), rgba(212, 173, 120, 0.24));
+  border-color: rgba(182, 146, 101, 0.45);
   color: var(--ink);
 }
 
@@ -423,8 +423,8 @@ select {
 }
 
 .image-note {
-  border: 1px solid rgba(139, 229, 194, 0.1);
-  background: rgba(8, 25, 43, 0.6);
+  border: 1px solid rgba(182, 146, 101, 0.2);
+  background: rgba(255, 248, 240, 0.92);
   border-radius: 18px;
   padding: 12px 14px;
   font-size: 0.86rem;
@@ -445,7 +445,7 @@ select {
 .order-card,
 .admin-product-card {
   border: 1px solid var(--line);
-  background: rgba(8, 25, 43, 0.72);
+  background: rgba(255, 251, 246, 0.9);
   box-shadow: var(--shadow-soft);
 }
 
@@ -477,7 +477,7 @@ select {
   position: absolute;
   inset: auto -30% -35% 45%;
   height: 260px;
-  background: radial-gradient(circle, rgba(244, 197, 127, 0.1), transparent 70%);
+  background: radial-gradient(circle, rgba(193, 154, 107, 0.16), transparent 70%);
   pointer-events: none;
 }
 
@@ -505,8 +505,8 @@ select {
 .signal-card,
 .tracking-result,
 .admin-badge {
-  border: 1px solid rgba(139, 229, 194, 0.16);
-  background: rgba(139, 229, 194, 0.06);
+  border: 1px solid rgba(182, 146, 101, 0.24);
+  background: rgba(193, 154, 107, 0.1);
   border-radius: 999px;
   padding: 9px 12px;
 }
@@ -538,11 +538,11 @@ select {
   flex-direction: column;
   gap: 18px;
   padding: 28px;
-  background: linear-gradient(135deg, rgba(16, 42, 69, 0.6) 0%, rgba(8, 25, 43, 0.8) 100%);
+  background: linear-gradient(135deg, rgba(255, 251, 246, 0.94) 0%, rgba(247, 237, 224, 0.92) 100%);
   border: 1px solid var(--line-strong);
   border-radius: 16px;
   backdrop-filter: blur(20px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(139, 229, 194, 0.1);
+  box-shadow: 0 8px 32px rgba(109, 81, 46, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .auth-grid {
@@ -581,7 +581,7 @@ select {
 
 .field-group input {
   padding: 12px 14px;
-  background: rgba(4, 17, 31, 0.6);
+  background: rgba(255, 255, 255, 0.92);
   border: 1.5px solid var(--line);
   border-radius: 10px;
   color: var(--ink);
@@ -590,14 +590,14 @@ select {
 }
 
 .field-group input::placeholder {
-  color: rgba(147, 170, 192, 0.5);
+  color: rgba(123, 103, 84, 0.55);
 }
 
 .field-group input:focus {
   outline: none;
   border-color: var(--brand);
-  background: rgba(4, 17, 31, 0.8);
-  box-shadow: 0 0 16px rgba(139, 229, 194, 0.15);
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 0 16px rgba(182, 146, 101, 0.2);
 }
 
 .password-field {
@@ -630,7 +630,7 @@ select {
 
 .password-toggle:hover {
   color: var(--brand-strong);
-  background: rgba(139, 229, 194, 0.08);
+  background: rgba(193, 154, 107, 0.12);
 }
 
 .link-button,
@@ -706,12 +706,12 @@ select {
 .auth-actions .add-btn {
   background: linear-gradient(135deg, var(--brand) 0%, var(--brand-strong) 100%);
   color: var(--bg);
-  box-shadow: 0 8px 24px rgba(91, 199, 161, 0.2);
+  box-shadow: 0 8px 24px rgba(182, 146, 101, 0.24);
 }
 
 .auth-actions .add-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(91, 199, 161, 0.3);
+  box-shadow: 0 12px 32px rgba(182, 146, 101, 0.28);
 }
 
 .auth-actions .add-btn:disabled {
@@ -728,7 +728,7 @@ select {
 .auth-actions .ghost-btn:hover {
   border-color: var(--brand);
   color: var(--brand);
-  background: rgba(139, 229, 194, 0.08);
+  background: rgba(193, 154, 107, 0.12);
 }
 
 .strength-meter {
@@ -743,7 +743,7 @@ select {
 .strength-meter span {
   height: 3px;
   flex: 1;
-  background: rgba(139, 229, 194, 0.2);
+  background: rgba(193, 154, 107, 0.24);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -754,9 +754,9 @@ select {
 }
 
 .flow-message {
-  border: 1px solid rgba(244, 197, 127, 0.22);
-  background: rgba(244, 197, 127, 0.08);
-  color: #ffe7be;
+  border: 1px solid rgba(182, 146, 101, 0.3);
+  background: rgba(212, 173, 120, 0.14);
+  color: #5d452f;
   border-radius: 18px;
   padding: 12px 14px;
 }
@@ -817,8 +817,8 @@ select {
 }
 
 .admin-form {
-  background: rgba(6, 21, 36, 0.36);
-  border: 1px solid rgba(139, 229, 194, 0.12);
+  background: rgba(255, 247, 238, 0.9);
+  border: 1px solid rgba(182, 146, 101, 0.2);
   border-radius: 24px;
   padding: 18px;
 }
@@ -830,9 +830,9 @@ select {
 .admin-image-preview {
   display: grid;
   gap: 10px;
-  border: 1px solid rgba(139, 229, 194, 0.12);
+  border: 1px solid rgba(182, 146, 101, 0.2);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.88);
   padding: 14px;
 }
 
@@ -912,7 +912,7 @@ select {
   position: absolute;
   inset: auto 0 0;
   padding: 18px;
-  background: linear-gradient(180deg, transparent, rgba(3, 11, 20, 0.88));
+  background: linear-gradient(180deg, transparent, rgba(63, 47, 34, 0.8));
 }
 
 .highlight-card:hover,
@@ -949,11 +949,11 @@ select {
   position: absolute;
   top: 14px;
   left: 14px;
-  border: 1px solid rgba(244, 197, 127, 0.3);
-  background: rgba(244, 197, 127, 0.12);
+  border: 1px solid rgba(182, 146, 101, 0.35);
+  background: rgba(212, 173, 120, 0.2);
   border-radius: 999px;
   padding: 6px 10px;
-  color: #ffe7be;
+  color: #4f3825;
   font-size: 0.75rem;
 }
 
@@ -984,7 +984,7 @@ select {
 
 .old-price {
   text-decoration: line-through;
-  color: #6d8699;
+  color: #9a846d;
 }
 
 .product-actions {
@@ -1010,7 +1010,7 @@ select {
   margin-top: 18px;
   border: 1px solid var(--line);
   border-radius: 24px;
-  background: rgba(8, 25, 43, 0.76);
+  background: rgba(255, 251, 246, 0.96);
   padding: 18px;
   display: flex;
   justify-content: space-between;
@@ -1023,9 +1023,9 @@ select {
   right: -430px;
   width: min(420px, 100%);
   height: 100vh;
-  background: rgba(5, 16, 28, 0.96);
-  border-left: 1px solid rgba(139, 229, 194, 0.12);
-  box-shadow: -24px 0 48px rgba(0, 0, 0, 0.3);
+  background: rgba(255, 251, 246, 0.98);
+  border-left: 1px solid rgba(182, 146, 101, 0.2);
+  box-shadow: -24px 0 48px rgba(109, 81, 46, 0.18);
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -1060,7 +1060,7 @@ select {
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 10px;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .cart-item img {
@@ -1083,13 +1083,13 @@ select {
 .cart-footer {
   margin-top: auto;
   padding-top: 14px;
-  border-top: 1px solid rgba(139, 229, 194, 0.1);
+  border-top: 1px solid rgba(182, 146, 101, 0.2);
 }
 
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(1, 5, 9, 0.62);
+  background: rgba(63, 47, 34, 0.26);
   backdrop-filter: blur(4px);
   z-index: 10;
 }
