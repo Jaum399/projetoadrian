@@ -547,7 +547,9 @@ function App() {
   }
 
   async function handleUpdateProfile(nextProfile) {
-    if (!currentUser?.sessionToken) {
+    const sessionToken = currentUser?.sessionToken || localStorage.getItem("x-session-token") || "";
+
+    if (!sessionToken) {
       setProfileMessage("Sua sessao expirou. Faca login novamente.");
       openAuthView("login");
       return false;
@@ -561,7 +563,7 @@ function App() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-session-token": currentUser.sessionToken
+          "x-session-token": sessionToken
         },
         body: JSON.stringify({
           action: "update-profile",
