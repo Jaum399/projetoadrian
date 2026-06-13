@@ -8,8 +8,8 @@
   --surface-light: rgba(250, 243, 234, 0.94);
   --line: rgba(182, 146, 101, 0.2);
   --line-strong: rgba(182, 146, 101, 0.36);
-  --ink: #3f2f22;
-  --muted: #7b6754;
+  --ink: #2f2218;
+  --muted: #5d4a38;
   --brand: #c19a6b;
   --brand-strong: #a87c45;
   --gold: #d4ad78;
@@ -239,7 +239,7 @@ select {
 
 .search-wrap input::placeholder,
 .field-group input::placeholder {
-  color: #9a846d;
+  color: #7a624b;
 }
 
 .search-wrap input:focus-visible,
@@ -605,7 +605,7 @@ select {
 }
 
 .field-group input::placeholder {
-  color: rgba(123, 103, 84, 0.55);
+  color: rgba(93, 74, 56, 0.72);
 }
 
 .field-group input:focus {
@@ -771,7 +771,7 @@ select {
 .flow-message {
   border: 1px solid rgba(182, 146, 101, 0.3);
   background: rgba(212, 173, 120, 0.14);
-  color: #5d452f;
+  color: #4a3522;
   border-radius: 18px;
   padding: 12px 14px;
 }
@@ -900,7 +900,8 @@ select {
 
 .danger-btn {
   border-color: rgba(255, 143, 143, 0.36);
-  color: #ffc8c8;
+  color: #7c2f2f;
+  background: rgba(191, 80, 80, 0.08);
 }
 
 .danger-btn:hover {
