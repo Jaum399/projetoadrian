@@ -519,7 +519,7 @@ export function AdminPanel({
           </div>
           <div className="signal-card compact">
             <strong>Fonte do catalogo</strong>
-            <p>{catalogSource === "mongodb" ? "MongoDB online" : "Fallback local"}</p>
+            <p>{catalogSource === "mongodb" ? "MongoDB online" : "Catalogo indisponivel"}</p>
           </div>
         </div>
 

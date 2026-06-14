@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { frontendFlows, imageConfig } from "./config/storeConfig";
-import { products as fallbackProducts } from "./data/products";
 import {
   AccountPanel,
   AdminPanel,
@@ -91,9 +90,9 @@ function App() {
   const [trackingInput, setTrackingInput] = useState("");
   const [trackingResult, setTrackingResult] = useState(null);
 
-  const [allProducts, setAllProducts] = useState(fallbackProducts);
+  const [allProducts, setAllProducts] = useState([]);
   const [catalogNotice, setCatalogNotice] = useState("");
-  const [catalogSource, setCatalogSource] = useState("fallback");
+  const [catalogSource, setCatalogSource] = useState("mongodb");
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [activeBanner, setActiveBanner] = useState(imageConfig.heroBanners[0].id);
 
@@ -213,13 +212,18 @@ function App() {
       const payload = await getJson(response);
       const nextProducts = Array.isArray(payload?.products) ? payload.products : [];
 
-      setAllProducts(nextProducts.length > 0 ? nextProducts : fallbackProducts);
-      setCatalogNotice(payload?.message || "");
-      setCatalogSource(payload?.source || "fallback");
+      setAllProducts(nextProducts);
+      setCatalogNotice(
+        payload?.message ||
+          (nextProducts.length === 0
+            ? "Catalogo vazio. Cadastre produtos no painel ADM."
+            : "")
+      );
+      setCatalogSource(payload?.source || "mongodb");
     } catch {
-      setAllProducts(fallbackProducts);
-      setCatalogNotice("Sem conexao com a API. Exibindo vitrine local.");
-      setCatalogSource("fallback");
+      setAllProducts([]);
+      setCatalogNotice("Catalogo indisponivel no momento. Tente novamente em instantes.");
+      setCatalogSource("unavailable");
     } finally {
       setIsCatalogLoading(false);
     }

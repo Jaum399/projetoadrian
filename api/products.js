@@ -1,4 +1,3 @@
-import { products as fallbackProducts } from "../src/data/products.js";
 import {
   ensureAdminUser,
   getDb,
@@ -80,10 +79,10 @@ export default async function handler(req, res) {
   const collectionName = getProductsCollectionName();
 
   if (!isMongoConfigured()) {
-    return res.status(200).json({
-      source: "fallback",
-      products: fallbackProducts,
-      message: "Variaveis do Mongo nao configuradas."
+    return res.status(503).json({
+      source: "unavailable",
+      products: [],
+      message: "Catalogo indisponivel: variaveis do Mongo nao configuradas."
     });
   }
 
@@ -104,17 +103,13 @@ export default async function handler(req, res) {
         .map((item, index) => normalizeProduct(item, index))
         .filter(Boolean);
 
-      if (normalized.length === 0) {
-        return res.status(200).json({
-          source: "fallback",
-          products: fallbackProducts,
-          message: "Colecao vazia. Exibindo catalogo ilustrativo."
-        });
-      }
-
       return res.status(200).json({
         source: "mongodb",
-        products: normalized
+        products: normalized,
+        message:
+          normalized.length === 0
+            ? "Catalogo vazio. Cadastre produtos no painel ADM."
+            : ""
       });
     }
 
@@ -193,6 +188,25 @@ export default async function handler(req, res) {
       });
     }
 
+    const shouldClearAll =
+      String(req.query?.all || req.body?.all || "").toLowerCase() === "true";
+
+    if (shouldClearAll) {
+      const docs = await collection.find({}, { projection: { image: 1 } }).toArray();
+      const uploadIds = docs
+        .map((item) => getUploadIdFromUrl(item?.image))
+        .filter(Boolean);
+
+      await Promise.all(uploadIds.map((uploadId) => uploadsBucket.delete(uploadId).catch(() => null)));
+      const result = await collection.deleteMany({});
+
+      return res.status(200).json({
+        source: "mongodb",
+        deletedCount: result.deletedCount || 0,
+        message: "Catalogo zerado com sucesso."
+      });
+    }
+
     const id = String(req.query?.id || req.body?.id || "").trim();
 
     if (!id) {
@@ -223,10 +237,10 @@ export default async function handler(req, res) {
       message: "Produto removido da vitrine."
     });
   } catch {
-    return res.status(200).json({
-      source: "fallback",
-      products: fallbackProducts,
-      message: "Falha ao carregar Mongo. Exibindo catalogo ilustrativo."
+    return res.status(503).json({
+      source: "unavailable",
+      products: [],
+      message: "Falha ao carregar o catalogo no MongoDB."
     });
   }
 }
