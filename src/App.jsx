@@ -12,9 +12,7 @@ import {
 } from "./components/FlowPanels";
 import {
   CartDrawer,
-  GallerySection,
   HeroSection,
-  HighlightsSection,
   ProductCatalogSection
 } from "./components/StoreSections";
 import {
@@ -1070,8 +1068,6 @@ function App() {
 
           {renderFlowPanel()}
 
-          <HighlightsSection />
-
           <ProductCatalogSection
             frontendFlows={frontendFlows}
             categories={categories}
@@ -1088,8 +1084,6 @@ function App() {
             onToggleWishlist={toggleWishlist}
             onEditProduct={fillAdminForm}
           />
-
-          <GallerySection />
         </section>
       </main>
 
