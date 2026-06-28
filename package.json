@@ -9,7 +9,8 @@
     "dev:api": "vercel dev --listen 4173",
     "dev:full": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
     "formidable": "^3.5.4",
@@ -20,7 +21,12 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
     "concurrently": "^9.2.1",
-    "vite": "^5.4.2"
+    "jsdom": "^25.0.1",
+    "vite": "^5.4.2",
+    "vitest": "^2.1.8"
   }
 }

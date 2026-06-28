@@ -1141,11 +1141,6 @@ function App() {
           </div>
         </div>
 
-        <div className="shipping-strip" aria-label="Informacoes da loja">
-          <span>Beauty commerce com linguagem premium</span>
-          <span>Vitrine com atualizacao automatica por estoque</span>
-          <span>Painel owner conectado ao banco e alertas por e-mail</span>
-        </div>
       </header>
 
       <main className="content-grid">
