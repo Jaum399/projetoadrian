@@ -34,6 +34,7 @@ import {
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").trim();
 const ALLOW_LOCAL_AUTH_FALLBACK =
   String(import.meta.env.VITE_ALLOW_LOCAL_AUTH_FALLBACK || "false").toLowerCase() === "true";
+const MENU_CATEGORIES = ["Masculino", "Feminino"];
 
 function buildApiUrl(path) {
   if (!API_BASE_URL) {
@@ -125,7 +126,7 @@ function App() {
   }, [isAdmin]);
 
   const categories = useMemo(() => {
-    const allowedCategories = new Set(frontendFlows.categoryMenu);
+    const allowedCategories = new Set(MENU_CATEGORIES);
     const nextCategories = [];
 
     allProducts
@@ -139,7 +140,7 @@ function App() {
         nextCategories.push(category);
       });
 
-    return frontendFlows.categoryMenu.filter((category) => nextCategories.includes(category));
+    return MENU_CATEGORIES.filter((category) => nextCategories.includes(category));
   }, [allProducts]);
 
   const visibleProducts = useMemo(() => {
@@ -1146,7 +1147,7 @@ function App() {
       <main className="content-grid">
         <aside className="category-sidebar" aria-label="Categorias da loja">
           <strong>Categorias</strong>
-          {frontendFlows.categoryMenu.map((item) => (
+          {MENU_CATEGORIES.map((item) => (
             <button key={item} type="button" onClick={() => handleCategoryMenuClick(item)}>
               {item}
             </button>

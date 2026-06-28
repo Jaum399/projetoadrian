@@ -9,6 +9,8 @@ import {
   withImageFallback
 } from "../lib/storeUi";
 
+const ADMIN_ALLOWED_CATEGORIES = ["Masculino", "Feminino"];
+
 export function AuthPanel({
   authView,
   authForm,
@@ -536,7 +538,7 @@ export function AdminPanel({
                 <label className="field-group">
                   <span>Categoria</span>
                   <select value={adminForm.category} onChange={(event) => onSetAdminForm("category", event.target.value)}>
-                    {frontendFlows.categoryMenu.map((category) => (
+                    {ADMIN_ALLOWED_CATEGORIES.map((category) => (
                       <option key={category} value={category}>
                         {category}
                       </option>

@@ -131,7 +131,6 @@ select {
 }
 
 .header-top p,
-.shipping-strip span,
 .brand-kicker,
 .hero-kicker,
 .flow-kicker,
@@ -280,15 +279,6 @@ select {
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
-}
-
-.shipping-strip {
-  border-top: 1px solid rgba(182, 146, 101, 0.18);
-  padding: 11px 18px;
-  display: flex;
-  gap: 16px;
-  overflow-x: auto;
-  color: var(--muted);
 }
 
 .content-grid {
@@ -1307,7 +1297,6 @@ select {
 @media (max-width: 560px) {
   .header-top,
   .header-main,
-  .shipping-strip,
   .category-sidebar,
   .flow-panel,
   .footer,
