@@ -22,12 +22,14 @@ export const AUTH_DEFAULT_FORM = {
 export const ADMIN_PRODUCT_DEFAULT = {
   id: "",
   name: "",
-  category: "Skincare",
+  category: "Feminino",
   price: "",
   oldPrice: "",
   image: "",
   badge: "Novo drop",
   flow: "novidades",
+  specifications: "",
+  stock: "1",
   active: true
 };
 

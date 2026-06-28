@@ -52,6 +52,15 @@ function handleApiResponse(response) {
   return { isSessionExpired: false, response };
 }
 
+function getStockValue(product) {
+  const value = Number.parseInt(String(product?.stock ?? "0"), 10);
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, value);
+}
+
 function App() {
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [selectedShowcase, setSelectedShowcase] = useState("todos");
@@ -118,19 +127,23 @@ function App() {
   const categories = useMemo(() => {
     const nextCategories = [];
 
-    allProducts.forEach((product) => {
+    allProducts
+      .filter((product) => product.active !== false && getStockValue(product) > 0)
+      .forEach((product) => {
       if (!product?.category || nextCategories.includes(product.category)) {
         return;
       }
 
       nextCategories.push(product.category);
-    });
+      });
 
     return nextCategories;
   }, [allProducts]);
 
   const visibleProducts = useMemo(() => {
     return allProducts.filter((product) => {
+      const hasStock = getStockValue(product) > 0;
+      const isActive = product.active !== false;
       const byCategory =
         selectedCategory === "Todos" || product.category === selectedCategory;
       const byShowcase =
@@ -139,7 +152,7 @@ function App() {
         search.trim() === "" ||
         product.name.toLowerCase().includes(search.toLowerCase().trim());
 
-      return byCategory && byShowcase && bySearch;
+      return isActive && hasStock && byCategory && byShowcase && bySearch;
     });
   }, [allProducts, search, selectedCategory, selectedShowcase]);
 
@@ -206,7 +219,9 @@ function App() {
   async function loadCatalog() {
     try {
       setIsCatalogLoading(true);
-      const response = await fetch(buildApiUrl("/api/products"));
+      const query = isAdmin ? "?includeInactive=true&includeOutOfStock=true" : "";
+      const headers = isAdmin && currentUser?.sessionToken ? { "x-session-token": currentUser.sessionToken } : {};
+      const response = await fetch(buildApiUrl(`/api/products${query}`), { headers });
       const payload = await getJson(response);
       const nextProducts = Array.isArray(payload?.products) ? payload.products : [];
 
@@ -229,7 +244,45 @@ function App() {
 
   useEffect(() => {
     loadCatalog();
-  }, []);
+  }, [isAdmin, currentUser?.sessionToken]);
+
+  useEffect(() => {
+    if (allProducts.length === 0) {
+      setCartItems([]);
+      setWishlistItems([]);
+      return;
+    }
+
+    const availableById = new Map(
+      allProducts
+        .filter((item) => item.active !== false && getStockValue(item) > 0)
+        .map((item) => [item.id, item])
+    );
+
+    setCartItems((previous) =>
+      previous
+        .map((item) => {
+          const latest = availableById.get(item.id);
+          if (!latest) {
+            return null;
+          }
+
+          const stock = getStockValue(latest);
+          return {
+            ...item,
+            ...latest,
+            qty: Math.min(item.qty, stock)
+          };
+        })
+        .filter(Boolean)
+    );
+
+    setWishlistItems((previous) =>
+      previous
+        .map((item) => availableById.get(item.id) || null)
+        .filter(Boolean)
+    );
+  }, [allProducts]);
 
   function setAuthField(field, value) {
     setAuthForm((previous) => ({ ...previous, [field]: value }));
@@ -253,9 +306,22 @@ function App() {
   }
 
   function addToCart(product) {
+    const stock = getStockValue(product);
+
+    if (stock <= 0) {
+      showToast("Produto sem estoque no momento.", "info");
+      return;
+    }
+
+    let reachedStockLimit = false;
     setCartItems((previous) => {
       const existing = previous.find((item) => item.id === product.id);
       if (existing) {
+        if (existing.qty >= stock) {
+          reachedStockLimit = true;
+          return previous;
+        }
+
         return previous.map((item) =>
           item.id === product.id ? { ...item, qty: item.qty + 1 } : item
         );
@@ -263,17 +329,43 @@ function App() {
 
       return [...previous, { ...product, qty: 1 }];
     });
+
+    if (reachedStockLimit) {
+      showToast("Quantidade maxima em estoque atingida para este item.", "info");
+      return;
+    }
+
     setIsCartOpen(true);
   }
 
   function updateQuantity(id, delta) {
-    setCartItems((previous) =>
-      previous
-        .map((item) =>
-          item.id === id ? { ...item, qty: Math.max(item.qty + delta, 0) } : item
-        )
-        .filter((item) => item.qty > 0)
-    );
+    let blockedByStock = false;
+    setCartItems((previous) => {
+      const nextItems = previous
+        .map((item) => {
+          if (item.id !== id) {
+            return item;
+          }
+
+          const nextQty = Math.max(item.qty + delta, 0);
+          if (delta > 0) {
+            const stock = getStockValue(item);
+            if (nextQty > stock) {
+              blockedByStock = true;
+              return item;
+            }
+          }
+
+          return { ...item, qty: nextQty };
+        })
+        .filter((item) => item.qty > 0);
+
+      return nextItems;
+    });
+
+    if (blockedByStock) {
+      showToast("Nao e possivel exceder o estoque disponivel.", "info");
+    }
   }
 
   function toggleWishlist(product) {
@@ -747,6 +839,8 @@ function App() {
       image: product.image,
       badge: product.badge,
       flow: product.flow,
+      specifications: product.specifications || "",
+      stock: String(getStockValue(product)),
       active: product.active !== false
     });
   }
@@ -819,6 +913,12 @@ function App() {
       return;
     }
 
+    const stock = Number.parseInt(String(adminForm.stock || "0"), 10);
+    if (!Number.isFinite(stock) || stock < 0) {
+      setAdminMessage("Informe uma quantidade de estoque valida (0 ou maior).");
+      return;
+    }
+
     try {
       setIsAdminSaving(true);
       const response = await fetch(buildApiUrl("/api/products"), {
@@ -830,7 +930,9 @@ function App() {
         body: JSON.stringify({
           ...adminForm,
           price: Number(adminForm.price),
-          oldPrice: Number(adminForm.oldPrice || adminForm.price)
+          oldPrice: Number(adminForm.oldPrice || adminForm.price),
+          specifications: String(adminForm.specifications || "").trim(),
+          stock
         })
       });
 
@@ -848,7 +950,11 @@ function App() {
         return;
       }
 
-      setAdminMessage(payload.message || "Catalogo atualizado.");
+      const stockAlertInfo = payload?.stockAlertSent
+        ? " Alerta de estoque zerado enviado por e-mail ao administrador."
+        : "";
+
+      setAdminMessage(`${payload.message || "Catalogo atualizado."}${stockAlertInfo}`);
       resetAdminForm();
       await loadCatalog();
     } catch (error) {
@@ -1014,7 +1120,7 @@ function App() {
 
           <label className="search-wrap">
             <input
-              placeholder="Busque skincare, maquiagem, perfumaria e limpeza premium"
+              placeholder="Busque produtos femininos e masculinos"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -1029,8 +1135,8 @@ function App() {
 
         <div className="shipping-strip" aria-label="Informacoes da loja">
           <span>Beauty commerce com linguagem premium</span>
-          <span>Cosmeticos e home care em uma unica curadoria</span>
-          <span>Painel owner conectado ao banco</span>
+          <span>Vitrine com atualizacao automatica por estoque</span>
+          <span>Painel owner conectado ao banco e alertas por e-mail</span>
         </div>
       </header>
 
@@ -1090,7 +1196,7 @@ function App() {
       <footer className="footer">
         <div>
           <strong>Adrian Future Store</strong>
-          <p>Curadoria de cosmeticos, perfumaria e produtos de limpeza com linguagem premium.</p>
+          <p>Curadoria premium com linhas feminino e masculino e controle de estoque em tempo real.</p>
         </div>
         <p>Atendimento: seg a sab, 9h as 20h | WhatsApp (11) 99999-9999</p>
       </footer>

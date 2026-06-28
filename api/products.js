@@ -2,16 +2,90 @@ import {
   ensureAdminUser,
   getDb,
   getProductsCollectionName,
+  getConfiguredAdminIdentity,
   getUploadIdFromUrl,
   getUploadsBucket,
   isMongoConfigured,
   requireAdmin
 } from "./_lib/mongo.js";
+import nodemailer from "nodemailer";
 
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1615634262417-4f48f9f95f7a?auto=format&fit=crop&w=800&q=80";
 const DEFAULT_FLOW = "novidades";
 const ALLOWED_FLOWS = new Set(["novidades", "autocuidado", "casa-impecavel"]);
+let emailTransport;
+
+function toSafeInteger(value, defaultValue) {
+  const parsed = Number.parseInt(String(value), 10);
+  if (!Number.isFinite(parsed)) {
+    return defaultValue;
+  }
+
+  return Math.max(parsed, 0);
+}
+
+function getMailConfig() {
+  const host = String(process.env.SMTP_HOST || "").trim();
+  const port = Number(process.env.SMTP_PORT || 587);
+  const user = String(process.env.SMTP_USER || "").trim();
+  const pass = String(process.env.SMTP_PASS || "").trim();
+  const from = String(process.env.STOCK_ALERT_FROM || user).trim();
+  const adminIdentity = getConfiguredAdminIdentity();
+  const to = String(process.env.STOCK_ALERT_TO || adminIdentity.email || "").trim();
+
+  if (!host || !port || !user || !pass || !from || !to) {
+    return null;
+  }
+
+  return {
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+    from,
+    to
+  };
+}
+
+function getMailTransport(config) {
+  if (!emailTransport) {
+    emailTransport = nodemailer.createTransport({
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      auth: config.auth
+    });
+  }
+
+  return emailTransport;
+}
+
+async function notifyStockDepleted(product) {
+  const config = getMailConfig();
+  if (!config) {
+    return false;
+  }
+
+  const transport = getMailTransport(config);
+  await transport.sendMail({
+    from: config.from,
+    to: config.to,
+    subject: `[Estoque Zerado] ${product.name}`,
+    text: [
+      "Um produto ficou sem estoque.",
+      "",
+      `Produto: ${product.name}`,
+      `Categoria: ${product.category}`,
+      `Estoque atual: ${product.stock}`,
+      `Preco atual: R$ ${Number(product.price || 0).toFixed(2)}`,
+      "",
+      "Acesse o painel administrativo para repor o estoque."
+    ].join("\n")
+  });
+
+  return true;
+}
 
 function toNumber(value, defaultValue) {
   const parsed = Number(value);
@@ -27,7 +101,7 @@ function normalizeProduct(product, index) {
   const category =
     typeof product?.category === "string" && product.category.trim()
       ? product.category.trim()
-      : "Skincare";
+      : "Feminino";
 
   const price = toNumber(product?.price, 0);
   const oldPrice = toNumber(product?.oldPrice, price);
@@ -39,6 +113,11 @@ function normalizeProduct(product, index) {
     typeof product?.badge === "string" && product.badge.trim()
       ? product.badge.trim()
       : "Destaque";
+  const specifications =
+    typeof product?.specifications === "string" && product.specifications.trim()
+      ? product.specifications.trim()
+      : "";
+  const stock = toSafeInteger(product?.stock, 1);
 
   const rawFlow =
     typeof product?.flow === "string" ? product.flow.trim().toLowerCase() : "";
@@ -52,7 +131,10 @@ function normalizeProduct(product, index) {
     oldPrice,
     image,
     badge,
-    flow
+    flow,
+    specifications,
+    stock,
+    active: product?.active !== false
   };
 }
 
@@ -94,14 +176,25 @@ export default async function handler(req, res) {
 
     if (req.method === "GET") {
       const includeInactive = String(req.query?.includeInactive || "") === "true";
+      const includeOutOfStock = String(req.query?.includeOutOfStock || "") === "true";
+      const adminFromToken = await requireAdmin(req);
+      const canUseAdminFilters = Boolean(adminFromToken);
       const docs = await collection
-        .find(includeInactive ? {} : { active: { $ne: false } })
+        .find(canUseAdminFilters && includeInactive ? {} : { active: { $ne: false } })
         .limit(200)
         .toArray();
 
       const normalized = docs
         .map((item, index) => normalizeProduct(item, index))
-        .filter(Boolean);
+        .filter(Boolean)
+        .filter((item) => {
+          const shouldHideOutOfStock = !(canUseAdminFilters && includeOutOfStock);
+          if (!shouldHideOutOfStock) {
+            return true;
+          }
+
+          return item.stock > 0;
+        });
 
       return res.status(200).json({
         source: "mongodb",
@@ -126,15 +219,24 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Produto invalido." });
       }
 
+      const alertNeeded = nextProduct.stock === 0;
       const result = await collection.insertOne({
         ...nextProduct,
         createdAt: new Date().toISOString()
       });
+      let stockAlertSent = false;
+      if (alertNeeded) {
+        stockAlertSent = await notifyStockDepleted(nextProduct).catch(() => false);
+      }
 
       return res.status(200).json({
         source: "mongodb",
         product: { ...nextProduct, id: String(result.insertedId) },
-        message: "Produto adicionado ao catalogo."
+        stockAlertSent,
+        message:
+          nextProduct.stock === 0
+            ? "Produto cadastrado com estoque zero e ocultado da vitrine."
+            : "Produto adicionado ao catalogo."
       });
     }
 
@@ -158,6 +260,8 @@ export default async function handler(req, res) {
           image: nextProduct.image,
           badge: nextProduct.badge,
           flow: nextProduct.flow,
+          specifications: nextProduct.specifications,
+          stock: nextProduct.stock,
           active: req.body?.active !== false,
           updatedAt: new Date().toISOString()
         }
@@ -181,9 +285,17 @@ export default async function handler(req, res) {
         await uploadsBucket.delete(previousUploadId).catch(() => null);
       }
 
+      const previousStock = toSafeInteger(previousProduct?.stock, 1);
+      const nextStock = nextProduct.stock;
+      let stockAlertSent = false;
+      if (previousStock > 0 && nextStock === 0) {
+        stockAlertSent = await notifyStockDepleted(nextProduct).catch(() => false);
+      }
+
       return res.status(200).json({
         source: "mongodb",
         product: normalizeProduct(result, 0),
+        stockAlertSent,
         message: "Produto atualizado."
       });
     }

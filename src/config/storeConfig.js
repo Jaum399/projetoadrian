@@ -6,8 +6,8 @@ export const imageConfig = {
   heroBanners: [
     {
       id: "hero-1",
-      title: "Beauty Commerce com linguagem de luxo",
-      subtitle: "Skincare, maquiagem e perfumaria em uma unica vitrine curada",
+      title: "Moda e beleza com curadoria premium",
+      subtitle: "Vitrine dedicada para linhas Feminino e Masculino com estoque em tempo real",
       image:
         "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1600&q=80"
     },
@@ -44,11 +44,11 @@ export const frontendFlows = {
     { key: "security", title: "Fluxo protegido", subtitle: "Login e painel owner separados" }
   ],
   hotSearches: [
-    "serum facial",
-    "body splash",
-    "kit limpeza premium",
-    "mascara capilar",
-    "sabonete liquido"
+    "perfume feminino",
+    "perfume masculino",
+    "kit presente",
+    "lancamentos",
+    "edicao limitada"
   ],
   support: {
     whatsapp: "(11) 99999-9999",
@@ -57,10 +57,7 @@ export const frontendFlows = {
     eta: "Postagem em ate 24h uteis"
   },
   categoryMenu: [
-    "Skincare",
-    "Maquiagem",
-    "Perfumaria",
-    "Cabelos",
-    "Casa e Limpeza"
+    "Feminino",
+    "Masculino"
   ]
 };

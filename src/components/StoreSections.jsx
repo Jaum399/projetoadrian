@@ -75,7 +75,7 @@ export function ProductCatalogSection({
 
       <div className="section-head">
         <h3>Lancamentos e curadoria</h3>
-        <p>Produtos com foco em venda consultiva para beleza e limpeza premium.</p>
+        <p>Produtos com foto, especificacoes tecnicas, preco e disponibilidade em estoque.</p>
       </div>
 
       <section className="product-grid">
@@ -90,10 +90,12 @@ export function ProductCatalogSection({
               <div className="product-body">
                 <small>{product.category}</small>
                 <h3>{product.name}</h3>
+                {product.specifications && <p className="product-specs">{product.specifications}</p>}
                 <p className="price-line">
                   <span className="price">{formatPrice(product.price)}</span>
                   <span className="old-price">{formatPrice(product.oldPrice)}</span>
                 </p>
+                <p className="stock-line">Estoque: {Number(product.stock || 0)} unidade(s)</p>
                 <div className="product-actions">
                   <button className="add-btn" onClick={() => onAddToCart(product)}>
                     Adicionar

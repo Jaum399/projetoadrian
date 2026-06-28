@@ -423,7 +423,7 @@ export function SupportPanel() {
       <div className="flow-copy">
         <p className="flow-kicker">Concierge</p>
         <h3>Atendimento boutique</h3>
-        <p>Suporte para fragrancias, skincare, maquiagem e linha de limpeza premium.</p>
+        <p>Suporte para fragrancias, presentes e selecao premium feminino e masculino.</p>
       </div>
 
       <div className="support-grid">
@@ -515,7 +515,7 @@ export function AdminPanel({
           <div>
             <p className="flow-kicker">Owner console</p>
             <h3>Painel administrativo</h3>
-            <p>Cadastre produtos, ajuste precos, troque imagens e remova itens sem sair da vitrine.</p>
+            <p>Cadastre produtos com estoque, especificacoes, preco e imagem para atualizar a vitrine em tempo real.</p>
           </div>
           <div className="signal-card compact">
             <strong>Fonte do catalogo</strong>
@@ -558,6 +558,10 @@ export function AdminPanel({
                   <span>Badge</span>
                   <input value={adminForm.badge} onChange={(event) => onSetAdminForm("badge", event.target.value)} placeholder="Novo drop" />
                 </label>
+                <label className="field-group">
+                  <span>Quantidade em estoque</span>
+                  <input inputMode="numeric" value={adminForm.stock} onChange={(event) => onSetAdminForm("stock", event.target.value)} placeholder="Ex: 12" />
+                </label>
               </div>
 
               <div className="auth-grid">
@@ -576,6 +580,11 @@ export function AdminPanel({
                   </select>
                 </label>
               </div>
+
+              <label className="field-group">
+                <span>Especificacoes</span>
+                <input value={adminForm.specifications} onChange={(event) => onSetAdminForm("specifications", event.target.value)} placeholder="Ex: Eau de parfum 100ml, fixacao intensa, amadeirado" />
+              </label>
 
               <label className="field-group admin-upload-field">
                 <span>Upload de imagem</span>
@@ -625,6 +634,8 @@ export function AdminPanel({
                       {formatPrice(product.price)}
                       <span className="admin-badge">{product.badge}</span>
                     </p>
+                    {product.specifications && <p>{product.specifications}</p>}
+                    <p className="stock-line">Estoque: {Number(product.stock || 0)} unidade(s)</p>
                   </div>
                   <div className="wishlist-buttons">
                     <button type="button" className="ghost-btn" onClick={() => onEdit(product)}>
@@ -649,7 +660,7 @@ export function HomeCallout() {
     <section className="flow-panel futuristic-panel home-callout">
       <div className="flow-copy">
         <p className="flow-kicker">Store concept</p>
-        <h3>Uma loja de cosmeticos e limpeza com linguagem futurista</h3>
+        <h3>Uma loja premium com catalogo feminino e masculino</h3>
         <p>O projeto agora suporta cadastro, login, area administrativa e catalogo editavel para a operacao do dono.</p>
         <div className="flow-benefits">
           <span>Beauty + home care</span>
