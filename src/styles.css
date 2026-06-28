@@ -893,6 +893,25 @@ select {
   margin-top: 6px;
 }
 
+.admin-product-card.is-out-of-stock {
+  border-color: rgba(191, 80, 80, 0.42);
+  box-shadow: 0 14px 26px rgba(191, 80, 80, 0.18);
+}
+
+.admin-stock-alert {
+  display: inline-flex;
+  margin-top: 8px;
+  border: 1px solid rgba(191, 80, 80, 0.4);
+  background: rgba(191, 80, 80, 0.16);
+  color: #7c2f2f;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .admin-product-card img,
 .gallery-card img,
 .highlight-card img,

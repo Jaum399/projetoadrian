@@ -125,19 +125,21 @@ function App() {
   }, [isAdmin]);
 
   const categories = useMemo(() => {
+    const allowedCategories = new Set(frontendFlows.categoryMenu);
     const nextCategories = [];
 
     allProducts
       .filter((product) => product.active !== false && getStockValue(product) > 0)
       .forEach((product) => {
-      if (!product?.category || nextCategories.includes(product.category)) {
-        return;
-      }
+        const category = String(product?.category || "").trim();
+        if (!allowedCategories.has(category) || nextCategories.includes(category)) {
+          return;
+        }
 
-      nextCategories.push(product.category);
+        nextCategories.push(category);
       });
 
-    return nextCategories;
+    return frontendFlows.categoryMenu.filter((category) => nextCategories.includes(category));
   }, [allProducts]);
 
   const visibleProducts = useMemo(() => {
@@ -289,6 +291,12 @@ function App() {
   }
 
   function setAdminField(field, value) {
+    if (field === "stock") {
+      const sanitized = String(value || "").replace(/\D/g, "").slice(0, 6);
+      setAdminForm((previous) => ({ ...previous, [field]: sanitized }));
+      return;
+    }
+
     setAdminForm((previous) => ({ ...previous, [field]: value }));
   }
 

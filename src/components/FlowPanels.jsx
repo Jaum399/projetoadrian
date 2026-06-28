@@ -560,7 +560,7 @@ export function AdminPanel({
                 </label>
                 <label className="field-group">
                   <span>Quantidade em estoque</span>
-                  <input inputMode="numeric" value={adminForm.stock} onChange={(event) => onSetAdminForm("stock", event.target.value)} placeholder="Ex: 12" />
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={adminForm.stock} onChange={(event) => onSetAdminForm("stock", event.target.value)} placeholder="Ex: 12" />
                 </label>
               </div>
 
@@ -625,7 +625,7 @@ export function AdminPanel({
 
             <div className="admin-products-grid">
               {allProducts.map((product) => (
-                <article key={product.id} className="admin-product-card">
+                <article key={product.id} className={Number(product.stock || 0) === 0 ? "admin-product-card is-out-of-stock" : "admin-product-card"}>
                   <img src={product.image} alt={product.name} onError={withImageFallback} />
                   <div>
                     <strong>{product.name}</strong>
@@ -635,6 +635,7 @@ export function AdminPanel({
                       <span className="admin-badge">{product.badge}</span>
                     </p>
                     {product.specifications && <p>{product.specifications}</p>}
+                    {Number(product.stock || 0) === 0 && <span className="admin-stock-alert">Sem estoque</span>}
                     <p className="stock-line">Estoque: {Number(product.stock || 0)} unidade(s)</p>
                   </div>
                   <div className="wishlist-buttons">
